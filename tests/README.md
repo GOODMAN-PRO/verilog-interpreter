@@ -160,3 +160,46 @@
 | [158_gpt_format_t_signed](cases/158_gpt_format_t_signed.v) | `%t` renders a negative integral argument as a large positive time. |
 | [159_gpt_gen_counter](cases/159_gpt_gen_counter.v) | Named generate loops do not consume their implicit-name ordinal. |
 | [160_dis](cases/160_dis.v) | disable across processes, named fork as a timeout, concurrent automatic tasks. |
+| [161_hunt2_d](cases/161_hunt2_d.v) | Function declared with a reg return type (function reg [3:0] f, function reg f) is rejected. |
+| [162_hunt2_a](cases/162_hunt2_a.v) | Automatic function: locals in a named block inside the function are not saved per recursion level. |
+| [163_hunt2_b](cases/163_hunt2_b.v) | Automatic function: local memory (array) is not saved per recursion level. |
+| [164_hunt2_c](cases/164_hunt2_c.v) | disable of an automatic task or block terminates only the current activation; Icarus terminates all activations. |
+| [165_hunt2_e02_dn_wor](cases/165_hunt2_e02_dn_wor.v) | `default_nettype wand/wor/tri0/tri1 ignored: implicit nets are always plain wires. |
+| [166_hunt2_g01_cfunc_static_rec](cases/166_hunt2_g01_cfunc_static_rec.v) | Recursive non-automatic function evaluated in a constant context uses static storage. |
+| [167_hunt2_f07_string_parameter_display](cases/167_hunt2_f07_string_parameter_display.v) | String parameter used as $display argument or format is printed as a number. |
+| [168_hunt2_f2](cases/168_hunt2_f2.v) | Legal finite zero-delay loop of more than 10M iterations is rejected as 'stuck at time 0'. |
+| [169_hunt2_t01](cases/169_hunt2_t01.v) | inout port connected to a concatenation of nets is rejected. |
+| [170_hunt2_r03](cases/170_hunt2_r03.v) | Undriven bits read x instead of z until a delayed driver of the same net first fires; unfired delayed drivers contribute z instead of x. |
+| [171_hunt2_e](cases/171_hunt2_e.v) | Hierarchical name task.block fails to resolve when the task is automatic. |
+| [172_hunt2_c01_param_before_use_mod](cases/172_hunt2_c01_param_before_use_mod.v) | Parameters used before their declaration are rejected in constant contexts. |
+| [173_hunt2_f01_plus_zero_flag](cases/173_hunt2_f01_plus_zero_flag.v) | + flag with 0 flag puts sign after zero padding in %f/%e/%g. |
+| [174_hunt2_f02_zero_flag_inf_nan](cases/174_hunt2_f02_zero_flag_inf_nan.v) | Zero flag pads inf/nan with zeros. |
+| [175_hunt2_f06_printtimescale_scope_arg](cases/175_hunt2_f06_printtimescale_scope_arg.v) | $printtimescale(scope) ignores its argument. |
+| [176_hunt2_big](cases/176_hunt2_big.v) | Huge %d width gives misleading 'nested or recursing too deeply' error. |
+| [177_hunt2_f6](cases/177_hunt2_f6.v) | `default_nettype wand/wor is ignored for implicit nets. |
+| [178_gpt2_param_const_finish](cases/178_gpt2_param_const_finish.v) | A constant function containing `$finish` throws out of `Verilog.run`. |
+| [179_gpt2_const_fn_shared](cases/179_gpt2_const_fn_shared.v) | One parameter's constant-function call supplies the next call's local state. |
+| [180_gpt2_default_kind](cases/180_gpt2_default_kind.v) | The active default net kind is lost on an implicit wire. |
+| [181_gpt2_wand_child](cases/181_gpt2_wand_child.v) | A wired inout loses its resolver when connected to an ordinary wire. |
+| [182_gpt2_tri1_child](cases/182_gpt2_tri1_child.v) | A tri1 inout fails to pull the connected bus high. |
+| [183_gpt2_delayed_initial_driver](cases/183_gpt2_delayed_initial_driver.v) | A pending delayed driver contributes Z until its first update. |
+| [184_gpt2_pull_conflict](cases/184_gpt2_pull_conflict.v) | Reversing opposing pulls changes the settled wire value. |
+| [185_gpt2_wand_pull](cases/185_gpt2_wand_pull.v) | Pulldown and pullup are ignored on an actively driven wired net. |
+| [186_gpt2_nmos_z](cases/186_gpt2_nmos_z.v) | An enabled MOS transistor turns a floating source into X. |
+| [187_gpt2_disable_recursive_task](cases/187_gpt2_disable_recursive_task.v) | Disabling a recursive task from another process aborts the simulation. |
+| [188_gpt2_automatic_local_storage](cases/188_gpt2_automatic_local_storage.v) | Automatic memories and named-block locals retain values across invocations. |
+| [189_gpt2_disable_auto_named_two_calls](cases/189_gpt2_disable_auto_named_two_calls.v) | Disabling a named block in an automatic task leaves another active copy running. |
+| [190_gpt2_star_wait_condition](cases/190_gpt2_star_wait_condition.v) | A wait condition is absent from an enclosing always @* sensitivity list. |
+| [191_gpt2_imp_call_arg](cases/191_gpt2_imp_call_arg.v) | An implicit port-connection net disappears inside a function argument. |
+| [192_gpt2_shadow_implicit](cases/192_gpt2_shadow_implicit.v) | An ancestor task prevents creation of an unrelated local net. |
+| [193_gpt2_default_none_forward](cases/193_gpt2_default_none_forward.v) | An explicit declaration later in the module is mistaken for an implicit net. |
+| [194_gpt2_inout_concat](cases/194_gpt2_inout_concat.v) | A legal concatenation cannot connect an inout port. |
+| [195_gpt2_inout_array_word](cases/195_gpt2_inout_array_word.v) | An inout rejects a constant-indexed word of a net array. |
+| [196_gpt2_rng_signedness](cases/196_gpt2_rng_signedness.v) | Unsigned bit patterns bypass signed integer conversion in $dist_uniform. |
+| [197_gpt2_fmt_ts_arg](cases/197_gpt2_fmt_ts_arg.v) | $printtimescale ignores the requested module instance. |
+| [198_gpt2_display_stringparam](cases/198_gpt2_display_stringparam.v) | A string-valued parameter is printed as decimal instead of being used as a display format. |
+| [199_gpt2_fmt_bareprecision](cases/199_gpt2_fmt_bareprecision.v) | A bare precision dot is printed literally in valid real conversions. |
+| [200_gpt2_signed_finite_specials](cases/200_gpt2_signed_finite_specials.v) | Real zero-padding displaces a positive sign and pads infinities with zeroes. |
+| [201_gpt2_fmt_empty_char](cases/201_gpt2_fmt_empty_char.v) | A null display operand disappears when consumed by a format conversion. |
+| [202_gpt2_fmt_zero_other](cases/202_gpt2_fmt_zero_other.v) | Zero-filled %c and %t fields receive spaces. |
+| [203_g1](cases/203_g1.v) | inout ports through two levels of hierarchy with pullup, pulldown and tri1. |
