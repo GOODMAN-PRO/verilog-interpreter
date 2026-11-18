@@ -84,3 +84,79 @@
 | [082_round_robin_arbiter](cases/082_round_robin_arbiter.v) | Rotating grant priority, request patterns and acceptance gating. |
 | [083_time_zero_level_sensitive](cases/083_time_zero_level_sensitive.v) | Level-sensitive always blocks see constants, parameters and initialisers at time 0. |
 | [084_time_zero_edge_sensitive](cases/084_time_zero_edge_sensitive.v) | A declaration initialiser is not an edge for an edge-triggered always block. |
+| [085_hunt_automatic_task_recursion_clobbers_args](cases/085_hunt_automatic_task_recursion_clobbers_args.v) | Automatic tasks are not re-entrant. |
+| [086_hunt_a1](cases/086_hunt_a1.v) | Automatic tasks share one static copy of arguments and locals (concurrent calls and recursion). |
+| [087_hunt_lost](cases/087_hunt_lost.v) | A change a process makes to its own wake-up net through a continuous assign is lost. |
+| [088_hunt_pow](cases/088_hunt_pow.v) | ** takes its signedness from both operands; Icarus uses the base only. |
+| [089_hunt_zp](cases/089_hunt_zp.v) | Zero-padded %0Nd of a negative number puts the zeros before the minus sign. |
+| [090_hunt_nba_intra_event_control](cases/090_hunt_nba_intra_event_control.v) | Nonblocking assignment with intra-assignment event control rejected. |
+| [091_hunt_hier_ref_task_local](cases/091_hunt_hier_ref_task_local.v) | Hierarchical reference into a task or function scope rejected. |
+| [092_hunt_f70_slow_bitwise_chain](cases/092_hunt_f70_slow_bitwise_chain.v) | Chain of per-bit continuous assigns into one vector (400 bits) is cubic and times out. |
+| [093_hunt_x14_inout_vec](cases/093_hunt_x14_inout_vec.v) | Inout port connected to a bit/part select of a wire is rejected. |
+| [094_hunt_r_elseif_scope](cases/094_hunt_r_elseif_scope.v) | else-if in a conditional generate creates an extra genblk scope. |
+| [095_hunt_r_pullup_gates](cases/095_hunt_r_pullup_gates.v) | pullup/pulldown/nmos/pmos/cmos/tran primitives fail with a confusing parse error. |
+| [096_hunt_sd_zero_neg](cases/096_hunt_sd_zero_neg.v) | %05d / %010d on negative values puts zeros before the minus sign. |
+| [097_hunt_real_round_half](cases/097_hunt_real_round_half.v) | %f %e %g round exact ties up; C printf rounds ties to even. |
+| [098_hunt_pu](cases/098_hunt_pu.v) | pullup/pulldown and switch primitives (nmos, pmos, tran) give a useless error. |
+| [099_hunt_half](cases/099_hunt_half.v) | %f/%e/%g round exact ties half-up instead of half-to-even. |
+| [100_hunt_big](cases/100_hunt_big.v) | %f prints values >= 1e21 in exponent form and loses requested digits. |
+| [101_hunt_rad](cases/101_hunt_rad.v) | %b, %o, %h of a real print decimal instead of the rounded integer in that radix. |
+| [102_hunt_rx](cases/102_hunt_rx.v) | A vector with x/z bits converted to real becomes 0.0. |
+| [103_hunt_inf](cases/103_hunt_inf.v) | Real infinity or NaN assigned to an integer or reg gives 0; Icarus gives x. |
+| [104_hunt_nz](cases/104_hunt_nz.v) | Negative zero loses its sign in %f/%e/%g. |
+| [105_hunt_str_line_continuation](cases/105_hunt_str_line_continuation.v) | A backslash-newline inside a string is not a line continuation (and line numbers go off by one). |
+| [106_hunt_up](cases/106_hunt_up.v) | %E and %G print a lowercase 'e'. |
+| [107_hunt_static_function_recursion_shared](cases/107_hunt_static_function_recursion_shared.v) | Static (non-automatic) recursive function behaves as automatic. |
+| [108_hunt_disable_forward_named_block](cases/108_hunt_disable_forward_named_block.v) | disable of a named block declared later in the same process is reported as 'not declared'. |
+| [109_hunt_fmt_left_justify_t_c](cases/109_hunt_fmt_left_justify_t_c.v) | Field width and left-justify flag ignored for %t and %c. |
+| [110_hunt_r_triand_decl](cases/110_hunt_r_triand_decl.v) | triand/trior/trireg declarations give a misleading parse error. |
+| [111_hunt_f33_port_expr](cases/111_hunt_f33_port_expr.v) | Explicit named ports in the module header `module m(.x(a), .y(b))` not parsed. |
+| [112_hunt_r_task_local_via_taskname](cases/112_hunt_r_task_local_via_taskname.v) | Hierarchical reference to a task/function local via the task or function name is rejected. |
+| [113_hunt_f12_ifdef_skipped_quote](cases/113_hunt_f12_ifdef_skipped_quote.v) | `ifdef-skipped text with an unbalanced double quote produces a lexer error. |
+| [114_hunt_zeropad_bho](cases/114_hunt_zeropad_bho.v) | Zero flag is ignored for %h %o and %s (only %b and %d honour it). |
+| [115_hunt_fixed_big](cases/115_hunt_fixed_big.v) | %f (and %t) of values >= 1e21 print JS exponent notation instead of full digits. |
+| [116_hunt_real_hex](cases/116_hunt_real_hex.v) | %h / %b / %o of a real print the decimal value instead of converting the rounded integer. |
+| [117_hunt_swriteh](cases/117_hunt_swriteh.v) | $swriteh / $swriteb / $swriteo are rejected as unsupported system tasks (also $printtimescale). |
+| [118_hunt_timeformat_var](cases/118_hunt_timeformat_var.v) | $timeformat rejects non-constant arguments, and a negative precision or width crashes with a misleading 'internal limit exceeded'. |
+| [119_hunt_monitor_glitch](cases/119_hunt_monitor_glitch.v) | $monitor does not fire when an argument changes and returns to its old value within one time step. |
+| [120_hunt_real_e_upper](cases/120_hunt_real_e_upper.v) | %E and %G upper-case specifiers print lower-case exponent. |
+| [121_hunt_fmt_width_ct_m](cases/121_hunt_fmt_width_ct_m.v) | Width and left-justify ignored for %-t, %Nc and %Nm. |
+| [122_hunt_mon](cases/122_hunt_mon.v) | $monitoron does not display the monitor line immediately. |
+| [123_hunt_dis](cases/123_hunt_dis.v) | Forward `disable name` of a block declared later says the block is not declared. |
+| [124_hunt_esc](cases/124_hunt_esc.v) | %5c ignores the field width; \xHH string escape is not recognised. |
+| [125_gpt_ca_masked_change](cases/125_gpt_ca_masked_change.v) | An unchanged RHS postpones an inertial transition. |
+| [126_gpt_vector_x_delay](cases/126_gpt_vector_x_delay.v) | A partially unknown vector uses the wrong transition delay. |
+| [127_gpt_inout_range](cases/127_gpt_inout_range.v) | An inout port adopts the parent's indexing and signedness. |
+| [128_gpt_star_param_index](cases/128_gpt_star_param_index.v) | A variable index into a parameter disappears from inferred sensitivity. |
+| [129_gpt_wired_kinds](cases/129_gpt_wired_kinds.v) | Unsupported wired and pulled net declarations silently use wire semantics. |
+| [130_gpt_implicit_parent_net](cases/130_gpt_implicit_parent_net.v) | A child’s implicit wire drives a same-named wire in its parent. |
+| [131_gpt_auto_task](cases/131_gpt_auto_task.v) | Overlapping automatic task calls overwrite each other’s inputs. |
+| [132_gpt_auto_func](cases/132_gpt_auto_func.v) | Function storage lifetime ignores automatic and static declarations. |
+| [133_gpt_param_select](cases/133_gpt_param_select.v) | Bit selection discards a parameter’s declared range. |
+| [134_gpt_const_call_state](cases/134_gpt_const_call_state.v) | Constant function evaluation changes later simulation results. |
+| [135_gpt_power_sign](cases/135_gpt_power_sign.v) | An unsigned exponent incorrectly zero-extends a signed base. |
+| [136_gpt_resetall](cases/136_gpt_resetall.v) | `resetall` leaves the previous time scale active. |
+| [137_gpt_monitor_resample](cases/137_gpt_monitor_resample.v) | `$monitor` loses pulses and the first sample after `$monitoron`. |
+| [138_gpt_sformat_variable](cases/138_gpt_sformat_variable.v) | `$sformat` treats a register-held format string as a number. |
+| [139_gpt_timeformat_runtime](cases/139_gpt_timeformat_runtime.v) | `$timeformat` evaluates its arguments before the calling process runs. |
+| [140_gpt_macro_commented_comma](cases/140_gpt_macro_commented_comma.v) | A comma inside a comment splits a macro argument. |
+| [141_gpt_inout_select](cases/141_gpt_inout_select.v) | Legal constant bit-selects cannot connect an inout port. |
+| [142_gpt_forward_hier_inout](cases/142_gpt_forward_hier_inout.v) | An inout cannot reference an explicitly named net declared later. |
+| [143_gpt_nba_event_capture](cases/143_gpt_nba_event_capture.v) | Event-controlled nonblocking assignments are rejected. |
+| [144_gpt_deferred_net_implicit](cases/144_gpt_deferred_net_implicit.v) | An implicit LHS net can be invisible to another process in the same module. |
+| [145_gpt_const_func_io](cases/145_gpt_const_func_io.v) | A system task inside a constant function emits output during elaboration. |
+| [146_gpt_forward_function](cases/146_gpt_forward_function.v) | A constant cannot call a function declared later in the module. |
+| [147_gpt_static_task_local](cases/147_gpt_static_task_local.v) | Legal hierarchical reads of static task variables fail. |
+| [148_gpt_static_block_forward](cases/148_gpt_static_block_forward.v) | A hierarchical reference to a later named procedural block fails. |
+| [149_gpt_gen_direct_nesting](cases/149_gpt_gen_direct_nesting.v) | Directly nested conditional generates introduce an extra hierarchy level. |
+| [150_gpt_gen_collision](cases/150_gpt_gen_collision.v) | An implicit generate-block name can reject an otherwise legal design. |
+| [151_gpt_nonansi_alias](cases/151_gpt_nonansi_alias.v) | A non-ANSI port cannot expose an internal signal under another name. |
+| [152_gpt_real_convert_x](cases/152_gpt_real_convert_x.v) | Converting a vector to real discards every known bit when one bit is X or Z. |
+| [153_gpt_ternary_real](cases/153_gpt_ternary_real.v) | An unknown condition selects the false branch of a real conditional. |
+| [154_gpt_zero_replication](cases/154_gpt_zero_replication.v) | A legal zero replication inside a nonempty concatenation is rejected. |
+| [155_gpt_real_fmtflags](cases/155_gpt_real_fmtflags.v) | Real display formatting drops the C plus flag. |
+| [156_gpt_sys_temporal](cases/156_gpt_sys_temporal.v) | `$printtimescale` cannot report the current module’s time scale. |
+| [157_gpt_dist_uniform](cases/157_gpt_dist_uniform.v) | `$dist_uniform` rejects a standard seeded distribution call. |
+| [158_gpt_format_t_signed](cases/158_gpt_format_t_signed.v) | `%t` renders a negative integral argument as a large positive time. |
+| [159_gpt_gen_counter](cases/159_gpt_gen_counter.v) | Named generate loops do not consume their implicit-name ordinal. |
+| [160_dis](cases/160_dis.v) | disable across processes, named fork as a timeout, concurrent automatic tasks. |
