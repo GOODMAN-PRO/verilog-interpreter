@@ -151,12 +151,12 @@ function padNum(s, width, zero, left) {
   const sign = s[0] === '-' || s[0] === '+' ? s[0] : '';
   return sign + s.slice(sign.length).padStart(width - sign.length, '0');
 }
-function fmtVec(base, v, signed, width, zero, left) {
+function fmtVec(base, v, signed, width, zero, left, plus) {
   let s, nat;
   if (base === 'd') {
     nat = signed ? (1n << BigInt(v.w - 1)).toString().length + 1 : mask(v.w).toString().length;
     if (v.b) { const m = mask(v.w); s = v.b === m && v.a === m ? 'x' : v.b === m && v.a === 0n ? 'z' : (v.a & v.b) ? 'X' : 'Z'; }
-    else s = (signed ? sbig(v) : v.a).toString();
+    else { s = (signed ? sbig(v) : v.a).toString(); if (plus && s[0] !== '-') s = '+' + s; }
   } else {
     const bits = base === 'b' ? 1 : base === 'o' ? 3 : 4;
     nat = Math.ceil(v.w / bits); s = '';
@@ -2277,7 +2277,7 @@ class Sim {
         if (s[p] !== '%') { out += s[p]; continue; }
         re.lastIndex = p;
         const m = re.exec(s);
-        if (!m) { out += '%'; continue; }
+        if (!m) { if (p + 1 < s.length) out += `<%${s[++p]}>`; else out += '%'; continue; }      // not a conversion: shown as is
         p += m[0].length - 1;
         const spec = m[4].toLowerCase(), left = m[1].includes('-'), plus = m[1].includes('+');
         if (spec === '%') out += '%';
@@ -2300,7 +2300,7 @@ class Sim {
     switch (spec) {
       case 'd': case 'b': case 'o': case 'h': case 'x': {
         const base = spec === 'x' ? 'h' : spec;
-        if (!a.real) return fmtVec(base, a.get(), a.s, width, zero, left);
+        if (!a.real) return fmtVec(base, a.get(), a.s, width, zero, left, plus);
         const r = a.get();
         if (!Number.isFinite(r)) return pad(nonFinite(r));
         return base === 'd' ? padNum(roundR(r).toString(), width, zero, left) : fmtVec(base, vn(64, roundR(r)), false, width === undefined ? 0 : width, zero, left);

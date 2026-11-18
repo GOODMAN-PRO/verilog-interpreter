@@ -203,3 +203,4 @@
 | [201_gpt2_fmt_empty_char](cases/201_gpt2_fmt_empty_char.v) | A null display operand disappears when consumed by a format conversion. |
 | [202_gpt2_fmt_zero_other](cases/202_gpt2_fmt_zero_other.v) | Zero-filled %c and %t fields receive spaces. |
 | [203_g1](cases/203_g1.v) | inout ports through two levels of hierarchy with pullup, pulldown and tri1. |
+| [204_tasks_fork_disable_mix](cases/204_tasks_fork_disable_mix.v) | Automatic recursion with memories, a named fork used as a timeout, disable across processes, event-controlled nonblocking assignment. |
