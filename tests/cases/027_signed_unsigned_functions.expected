@@ -1,0 +1,5 @@
+cast -8 248
+extend fff8 00f8 sum=2
+compare 1 0
+shift 11111110 00111110
+sizes 8 8

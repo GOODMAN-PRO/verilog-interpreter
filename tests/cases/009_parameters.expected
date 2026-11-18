@@ -1,0 +1,4 @@
+params 7 -9 1234 2.50
+derived 16 4 7f
+clog2 0 0 1 2 5
+bits 32 8 7

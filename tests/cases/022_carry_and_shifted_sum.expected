@@ -1,0 +1,4 @@
+capture 1 44 wide=300
+average narrow=22 wide=150
+self sum=44 shifted=22
+leftshift wide=1200 self=176

@@ -1,0 +1,5 @@
+blocking a=9 b=3
+active a=9 b=3
+inactive a=9 b=3
+nba a=3 b=9
+ordered=12

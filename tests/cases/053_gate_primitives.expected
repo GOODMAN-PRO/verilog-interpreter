@@ -1,0 +1,12 @@
+g en=0 a=0 b=0 y=z1z001101100
+g en=0 a=0 b=1 y=z1z001010110
+g en=0 a=1 b=0 y=z0z110010110
+g en=0 a=1 b=1 y=z0z110100011
+g en=1 a=0 b=0 y=1z0z01101100
+g en=1 a=0 b=1 y=1z0z01010110
+g en=1 a=1 b=0 y=0z1z10010110
+g en=1 a=1 b=1 y=0z1z10100011
+g en=x a=0 b=x y=xxxx01xxx1x0
+g en=z a=1 b=z y=xxxx10xx0x1x
+g en=0 a=z b=0 y=zxzxxxxxx1x0
+g en=1 a=x b=1 y=xzxzxxxx0x1x

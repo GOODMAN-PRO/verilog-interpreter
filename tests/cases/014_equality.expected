@@ -1,0 +1,6 @@
+10xz 10xz eq=x ne=x caseeq=1 casene=0
+10xz 10zx eq=x ne=x caseeq=0 casene=1
+10xz 11xz eq=0 ne=1 caseeq=0 casene=1
+10xz 1000 eq=x ne=x caseeq=0 casene=1
+10xz 0000 eq=0 ne=1 caseeq=0 casene=1
+known 1 0 1 0

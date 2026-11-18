@@ -1,0 +1,14 @@
+en=1 we=1 addr=0 din=30 dout=xx
+en=1 we=1 addr=1 din=31 dout=xx
+en=1 we=1 addr=2 din=32 dout=xx
+en=1 we=1 addr=3 din=33 dout=xx
+en=1 we=0 addr=3 din=00 dout=33
+en=1 we=0 addr=2 din=00 dout=32
+en=1 we=0 addr=1 din=00 dout=31
+en=1 we=0 addr=0 din=00 dout=30
+en=1 we=1 addr=2 din=aa dout=32
+en=1 we=0 addr=2 din=00 dout=aa
+en=0 we=1 addr=2 din=ff dout=aa
+en=1 we=0 addr=2 din=00 dout=aa
+en=1 we=1 addr=x din=55 dout=xx
+en=1 we=0 addr=2 din=00 dout=aa

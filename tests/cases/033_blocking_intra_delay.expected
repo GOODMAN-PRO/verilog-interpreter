@@ -1,0 +1,3 @@
+captured a=7 b=9 time=3
+delayed statement a=11 time=5
+blocking index=1 mem=0,11

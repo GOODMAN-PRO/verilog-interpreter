@@ -1,0 +1,14 @@
+en=1 down=0 q=1
+en=1 down=0 q=2
+en=1 down=0 q=3
+en=1 down=0 q=4
+en=1 down=0 q=5
+en=1 down=0 q=6
+en=1 down=0 q=7
+en=1 down=0 q=0
+en=1 down=0 q=1
+en=0 down=0 q=1
+en=1 down=1 q=0
+en=1 down=1 q=7
+en=0 down=1 q=7
+async reset q=0

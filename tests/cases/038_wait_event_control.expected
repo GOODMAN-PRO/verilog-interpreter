@@ -1,0 +1,3 @@
+wait data=7 time=7
+edge data=9 time=10
+already ready time=10

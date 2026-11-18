@@ -1,0 +1,16 @@
+wr=0 rd=1 din=00 dout=00 count=0 full=0 empty=1
+wr=1 rd=0 din=11 dout=00 count=1 full=0 empty=0
+wr=1 rd=0 din=22 dout=00 count=2 full=0 empty=0
+wr=1 rd=0 din=33 dout=00 count=3 full=0 empty=0
+wr=1 rd=0 din=44 dout=00 count=4 full=1 empty=0
+wr=1 rd=0 din=ee dout=00 count=4 full=1 empty=0
+wr=1 rd=1 din=ff dout=11 count=3 full=0 empty=0
+wr=1 rd=1 din=55 dout=22 count=3 full=0 empty=0
+wr=0 rd=1 din=00 dout=33 count=2 full=0 empty=0
+wr=0 rd=1 din=00 dout=44 count=1 full=0 empty=0
+wr=0 rd=1 din=00 dout=55 count=0 full=0 empty=1
+wr=0 rd=1 din=00 dout=55 count=0 full=0 empty=1
+wr=1 rd=1 din=66 dout=55 count=1 full=0 empty=0
+wr=1 rd=1 din=77 dout=66 count=1 full=0 empty=0
+wr=0 rd=1 din=00 dout=77 count=0 full=0 empty=1
+wr=0 rd=1 din=00 dout=77 count=0 full=0 empty=1

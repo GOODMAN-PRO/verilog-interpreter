@@ -1,0 +1,4 @@
+accepted=1 last=1 total=1
+accepted=2 last=3 total=4
+accepted=3 last=5 total=9
+after scan i=7 total=9 accepted=3 last=5

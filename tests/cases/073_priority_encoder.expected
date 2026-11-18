@@ -1,0 +1,14 @@
+request=00000000 valid=0 index=0
+request=00000001 valid=1 index=0
+request=00000010 valid=1 index=1
+request=00000100 valid=1 index=2
+request=00001000 valid=1 index=3
+request=00010000 valid=1 index=4
+request=00100000 valid=1 index=5
+request=01000000 valid=1 index=6
+request=10000000 valid=1 index=7
+request=00110101 valid=1 index=5
+request=11111111 valid=1 index=7
+request=1xxxxxxx valid=1 index=7
+request=0x000001 valid=0 index=0
+request=0000000z valid=1 index=0

@@ -1,0 +1,7 @@
+value=0000 casez=0 casex=0
+value=0011 casez=2 casex=2
+value=1010 casez=4 casex=4
+value=0z01 casez=3 casex=3
+value=0x01 casez=0 casex=3
+value=z000 casez=4 casex=4
+value=x000 casez=0 casex=4

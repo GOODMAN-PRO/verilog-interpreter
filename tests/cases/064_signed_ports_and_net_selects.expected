@@ -1,0 +1,3 @@
+ports signed=-5 slice=251 assembled=bf asc=1111
+ports signed=xxxxxxxxx101z010 slice=00000000x101z010 assembled=z010x101 asc=z010
+ports signed=127 slice=127 assembled=f7

@@ -1,0 +1,5 @@
+add signed=0000 mixed=0100 destination_unsigned=0000
+compare signed=1 mixed=0
+divide signed=-1 mixed=84
+remainder signed=0 mixed=1
+equal_width 1 0

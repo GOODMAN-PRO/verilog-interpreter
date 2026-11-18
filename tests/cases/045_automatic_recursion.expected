@@ -1,0 +1,7 @@
+n=0 factorial=1 fibonacci=0
+n=1 factorial=1 fibonacci=1
+n=2 factorial=2 fibonacci=1
+n=3 factorial=6 fibonacci=2
+n=4 factorial=24 fibonacci=3
+n=5 factorial=120 fibonacci=5
+n=6 factorial=720 fibonacci=8

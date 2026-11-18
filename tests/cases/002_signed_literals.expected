@@ -1,0 +1,5 @@
+signed -5 -128 5
+literal -5 -5 -5 -5
+extend fff0 00f0
+unary fb fb fb
+width 32 32 8

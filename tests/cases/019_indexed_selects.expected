@@ -1,0 +1,6 @@
+read 0 d+a d-a u+c u-c offa
+read 4 d+9 d-9 u+3 u-3 off9
+read 8 d+3 d-3 u+9 u-9 off3
+read 12 d+c d-c u+a u-a offc
+lhs_plus c35a c59a c35a
+lhs_minus c65a c56a c65a

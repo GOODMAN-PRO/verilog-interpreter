@@ -1,0 +1,15 @@
+cycle=0 div2=1 tick2=1 div6=0 tick6=0 count=1
+cycle=1 div2=0 tick2=1 div6=0 tick6=0 count=2
+cycle=2 div2=1 tick2=1 div6=1 tick6=1 count=0
+cycle=3 div2=0 tick2=1 div6=1 tick6=0 count=1
+cycle=4 div2=1 tick2=1 div6=1 tick6=0 count=2
+cycle=5 div2=0 tick2=1 div6=0 tick6=1 count=0
+cycle=6 div2=1 tick2=1 div6=0 tick6=0 count=1
+cycle=7 div2=0 tick2=1 div6=0 tick6=0 count=2
+cycle=8 div2=1 tick2=1 div6=1 tick6=1 count=0
+cycle=9 div2=0 tick2=1 div6=1 tick6=0 count=1
+cycle=10 div2=1 tick2=1 div6=1 tick6=0 count=2
+cycle=11 div2=0 tick2=1 div6=0 tick6=1 count=0
+cycle=12 div2=1 tick2=1 div6=0 tick6=0 count=1
+cycle=13 div2=0 tick2=1 div6=0 tick6=0 count=2
+reset div2=0 div6=0 ticks=00

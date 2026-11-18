@@ -1,0 +1,7 @@
+unknown_zero x 1 0 x
+unknown_true 0 x 1
+z x x x
+unsigned 0 0 1 1
+signed 1 1 0 0
+equal 0 1 0 1
+unknown_rel x x x x

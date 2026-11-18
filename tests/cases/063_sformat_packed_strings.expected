@@ -1,0 +1,7 @@
+formatted <count=-17 hex=af char=Q %>
+formatted <real=2.38 signed=  -17>
+truncate <defghijk> 6465666768696a6b
+formatted <xz=xxzz0011/X3>
+escapes <line1
+line2	"quoted"\end>
+formatted <scope=tb>

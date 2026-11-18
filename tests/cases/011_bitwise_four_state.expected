@@ -1,0 +1,7 @@
+input 1010xxzz 11000101
+and 10000x0x or 1110x1x1
+xor 0110xxxx xnor 1001xxxx 1001xxxx
+not 0101xxxx
+states xx00xx01 xx11xx01 xx11xx00 xx00xx11
+mask0 00000000 mask1 11111111
+identity xx01xx01 xx01xx01

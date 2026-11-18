@@ -1,0 +1,6 @@
+condition=00 result=10xz0110
+condition=01 result=10xz0101
+condition=0x result=10xz01xx
+condition=zz result=10xz01xx
+condition=1x result=10xz0101
+nested=8

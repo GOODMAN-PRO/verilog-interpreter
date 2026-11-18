@@ -1,0 +1,7 @@
+text=[ Hello, HDL!] short=[CDEF]
+quote=" slash=\ tab=	end
+newline=first
+second
+octal=ABC
+packed=4142 char=Z
+stringbits=24

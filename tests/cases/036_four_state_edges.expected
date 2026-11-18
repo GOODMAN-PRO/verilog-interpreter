@@ -1,0 +1,10 @@
+signal=0 rises=0 falls=1
+signal=1 rises=1 falls=1
+signal=x rises=1 falls=2
+signal=1 rises=2 falls=2
+signal=z rises=2 falls=3
+signal=0 rises=2 falls=4
+signal=x rises=3 falls=4
+signal=z rises=3 falls=4
+signal=1 rises=4 falls=4
+signal=0 rises=4 falls=5

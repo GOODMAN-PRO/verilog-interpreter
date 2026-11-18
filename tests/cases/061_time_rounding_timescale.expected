@@ -1,0 +1,5 @@
+a time=0 stime=0 real=0.300 fmt=3.0 ns
+b time=1 stime=1 real=0.600 fmt=    6.0 ns
+c time=2 real=1.800
+micro 0.018 us
+wide time=4294967298 stime=2

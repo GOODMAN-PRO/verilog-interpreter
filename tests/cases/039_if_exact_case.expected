@@ -1,0 +1,6 @@
+value=0000 if=0 case=zero
+value=0010 if=1 case=two-or-three
+value=0011 if=1 case=two-or-three
+value=x000 if=0 case=exact-x
+value=z000 if=0 case=exact-z
+value=x001 if=1 case=other

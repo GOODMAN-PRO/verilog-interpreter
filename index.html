@@ -1,0 +1,732 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Verilog Interpreter — run Verilog in your browser</title>
+<meta name="description" content="A Verilog-2001 interpreter that runs entirely in your browser. Write a design and a testbench, press Run, and see $display output and waveforms. Nothing to install, nothing is uploaded.">
+<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Crect width='32' height='32' rx='6' fill='%230b6bcb'/%3E%3Cpath d='M4 22h6V10h6v12h6V10h6' fill='none' stroke='%23fff' stroke-width='2.5' stroke-linejoin='round'/%3E%3C/svg%3E">
+<style>
+:root {
+  color-scheme: light dark;
+  --bg: #f3f5f8; --panel: #ffffff; --ink: #18202c; --muted: #566273; --line: #d5dbe4; --accent: #0b62bd; --accent-ink: #ffffff;
+  --err: #b3261e; --err-bg: #fdeceb; --code-bg: #fbfcfe; --gutter: #7f8a99; --mark: #ffe9e7;
+  --w-bit: #0a7a3c; --w-bus: #0b62bd; --w-x: #c62828; --w-z: #a86200; --w-grid: #e4e9f0; --w-cursor: #6d35d9;
+  --mono: ui-monospace, "SF Mono", "Cascadia Code", "Cascadia Mono", Menlo, Consolas, "Liberation Mono", monospace;
+  --sans: system-ui, -apple-system, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
+  --lh: 20px;
+}
+@media (prefers-color-scheme: dark) {
+  :root {
+    --bg: #0d1117; --panel: #151b24; --ink: #e4e9f0; --muted: #9aa6b6; --line: #29323f; --accent: #63adff; --accent-ink: #04121f;
+    --err: #ff8f85; --err-bg: #3a1715; --code-bg: #10151c; --gutter: #627084; --mark: #40201e;
+    --w-bit: #4cd98a; --w-bus: #6fb7ff; --w-x: #ff6b6b; --w-z: #ffb74d; --w-grid: #212a36; --w-cursor: #c4a1ff;
+  }
+}
+* { box-sizing: border-box; }
+html, body { height: 100%; }
+body { margin: 0; background: var(--bg); color: var(--ink); font: 14px/1.45 var(--sans); display: flex; flex-direction: column; }
+button, select, input, textarea { font: inherit; color: inherit; }
+:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
+
+header { display: flex; flex-wrap: wrap; align-items: center; gap: 8px 14px; padding: 10px 16px; background: var(--panel); border-bottom: 1px solid var(--line); }
+h1 { font-size: 16px; margin: 0; font-weight: 650; letter-spacing: -0.01em; white-space: nowrap; }
+h1 span { color: var(--muted); font-weight: 400; }
+.tools { display: flex; flex-wrap: wrap; align-items: center; gap: 8px; margin-left: auto; }
+.btn, select, input[type=search] { height: 32px; padding: 0 12px; border: 1px solid var(--line); border-radius: 6px; background: var(--panel); }
+.btn { cursor: pointer; white-space: nowrap; }
+.btn:hover:not(:disabled) { border-color: var(--muted); }
+.btn:disabled { opacity: 0.45; cursor: default; }
+.btn.primary { background: var(--accent); border-color: var(--accent); color: var(--accent-ink); font-weight: 600; }
+.btn.icon { width: 32px; padding: 0; }
+kbd { font: 11px var(--mono); padding: 1px 5px; border: 1px solid var(--line); border-radius: 4px; background: var(--bg); color: var(--muted); }
+.btn.primary kbd { background: transparent; border-color: currentColor; color: inherit; opacity: 0.8; }
+a { color: var(--accent); }
+
+main { flex: 1; min-height: 0; display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 1fr); gap: 12px; padding: 12px 16px 16px; }
+.right { display: grid; grid-template-rows: minmax(140px, 2fr) minmax(180px, 3fr); gap: 12px; min-height: 0; }
+.panel { display: flex; flex-direction: column; min-height: 0; min-width: 0; background: var(--panel); border: 1px solid var(--line); border-radius: 8px; overflow: hidden; }
+.bar { display: flex; flex-wrap: wrap; align-items: center; gap: 6px 10px; padding: 6px 10px; min-height: 40px; border-bottom: 1px solid var(--line); }
+.bar h2 { font-size: 12px; font-weight: 650; text-transform: uppercase; letter-spacing: 0.06em; color: var(--muted); margin: 0; }
+.bar .sp { margin-left: auto; }
+.bar .btn, .bar select, .bar input { height: 28px; padding: 0 8px; font-size: 13px; }
+.bar .btn.icon { width: 28px; }
+.status { font-size: 13px; color: var(--muted); }
+
+.editor { position: relative; flex: 1; min-height: 0; display: flex; background: var(--code-bg); font: 13px/var(--lh) var(--mono); }
+#gutter { flex: none; min-width: 44px; padding: 10px 8px 10px 6px; margin: 0; text-align: right; color: var(--gutter); white-space: pre; overflow: hidden; user-select: none; border-right: 1px solid var(--line); font: inherit; }
+#src { flex: 1; min-width: 0; margin: 0; padding: 10px 12px; border: 0; resize: none; background: transparent; font: inherit; white-space: pre; overflow: auto; tab-size: 2; position: relative; z-index: 1; }
+#src:focus-visible { outline: none; }
+.editor:focus-within { box-shadow: inset 0 0 0 2px var(--accent); }
+#mark { position: absolute; left: 0; right: 0; height: var(--lh); background: var(--mark); border-left: 3px solid var(--err); pointer-events: none; display: none; }
+
+#out { flex: 1; min-height: 0; margin: 0; padding: 10px 12px; overflow: auto; font: 13px/1.5 var(--mono); white-space: pre-wrap; overflow-wrap: anywhere; background: var(--code-bg); }
+#out .hint { color: var(--muted); font-family: var(--sans); }
+#err { margin: 0; padding: 8px 12px; background: var(--err-bg); color: var(--err); font: 13px/1.5 var(--mono); border-top: 1px solid var(--line); white-space: pre-wrap; overflow-wrap: anywhere; }
+#err button { margin-left: 8px; font: 12px var(--sans); height: 24px; padding: 0 8px; border: 1px solid currentColor; border-radius: 5px; background: transparent; color: inherit; cursor: pointer; }
+
+.wscroll { flex: 1; min-height: 0; overflow: auto; display: flex; background: var(--code-bg); }
+.wnames { flex: none; width: 230px; border-right: 1px solid var(--line); font: 12px/28px var(--mono); padding-top: 24px; }
+.wn { display: flex; gap: 8px; height: 28px; padding: 0 8px; white-space: nowrap; border-bottom: 1px solid var(--w-grid); }
+.wn .nm { flex: 1; min-width: 0; overflow: hidden; text-overflow: ellipsis; direction: rtl; text-align: left; }
+.wn .nm bdi { direction: ltr; }
+.wn .nm i { font-style: normal; color: var(--muted); }
+.wn .wv { color: var(--accent); max-width: 45%; overflow: hidden; text-overflow: ellipsis; }
+.wcanvas { flex: 1; min-width: 0; position: relative; }
+#wave { display: block; width: 100%; touch-action: pan-y; cursor: crosshair; }
+.wempty { margin: auto; padding: 24px; color: var(--muted); text-align: center; }
+#filter { width: 130px; }
+
+dialog { max-width: min(640px, calc(100vw - 32px)); border: 1px solid var(--line); border-radius: 10px; background: var(--panel); color: var(--ink); padding: 20px 22px; }
+dialog::backdrop { background: rgba(0, 0, 0, 0.45); }
+dialog h2 { margin: 0 0 8px; font-size: 17px; }
+dialog h3 { margin: 16px 0 4px; font-size: 13px; text-transform: uppercase; letter-spacing: 0.05em; color: var(--muted); }
+dialog p, dialog ul { margin: 6px 0; }
+dialog ul { padding-left: 20px; }
+dialog code { font: 12.5px var(--mono); }
+dialog form { margin-top: 16px; text-align: right; }
+
+/* after every `font:` shorthand above, which would reset these: keep <= and != as typed */
+.editor, #src, #gutter, #out, #err, .wnames, code { font-variant-ligatures: none; font-feature-settings: "liga" 0, "calt" 0; }
+
+@media (max-width: 900px) {
+  html, body { height: auto; }
+  main { grid-template-columns: minmax(0, 1fr); }
+  .right { grid-template-rows: none; }
+  .editor { height: 60vh; flex: none; }
+  #out { max-height: 50vh; min-height: 120px; }
+  .wscroll { max-height: 70vh; min-height: 160px; }
+  .wnames { width: 140px; }
+  .tools { margin-left: 0; width: 100%; }
+  h1 span { display: none; }
+}
+</style>
+</head>
+<body>
+<header>
+  <h1>Verilog Interpreter <span>— runs in your browser</span></h1>
+  <div class="tools">
+    <label for="examples" class="status">Example</label>
+    <select id="examples"></select>
+    <button class="btn primary" id="run" title="Run the simulation (Ctrl+Enter)">Run <kbd>Ctrl ↵</kbd></button>
+    <button class="btn" id="stop" disabled>Stop</button>
+    <button class="btn" id="help" aria-haspopup="dialog">Help</button>
+  </div>
+</header>
+
+<main>
+  <section class="panel" aria-label="Verilog source">
+    <div class="bar"><h2>Source</h2><span class="status sp" id="pos"></span></div>
+    <div class="editor">
+      <div id="mark"></div>
+      <pre id="gutter" aria-hidden="true">1</pre>
+      <textarea id="src" aria-label="Verilog source code" spellcheck="false" autocomplete="off" autocapitalize="off" autocorrect="off" wrap="off"></textarea>
+    </div>
+  </section>
+
+  <div class="right">
+    <section class="panel" aria-label="Simulation output">
+      <div class="bar"><h2>Output</h2><span class="status sp" id="status" role="status">Ready</span></div>
+      <pre id="out" role="log" aria-live="polite" tabindex="0"><span class="hint">Press Run to simulate. Text printed with $display, $write, $strobe and $monitor appears here.</span></pre>
+      <p id="err" role="alert" hidden></p>
+    </section>
+
+    <section class="panel" aria-label="Waveforms">
+      <div class="bar">
+        <h2>Waveforms</h2>
+        <span class="status" id="readout"></span>
+        <span class="sp"></span>
+        <input type="search" id="filter" placeholder="Filter signals" aria-label="Filter signals by name">
+        <select id="radix" aria-label="Number format for buses"><option value="hex">hex</option><option value="dec">decimal</option><option value="bin">binary</option></select>
+        <button class="btn icon" id="zin" title="Zoom in (+)" aria-label="Zoom in">+</button>
+        <button class="btn icon" id="zout" title="Zoom out (−)" aria-label="Zoom out">−</button>
+        <button class="btn" id="zfit" title="Show the whole simulation (0)">Fit</button>
+      </div>
+      <div class="wscroll" id="wscroll">
+        <p class="wempty" id="wempty">Waveforms of every wire and reg appear here after a run.</p>
+        <div class="wnames" id="wnames" hidden></div>
+        <div class="wcanvas" id="wcanvas" hidden><canvas id="wave" tabindex="0" role="img" aria-label="Waveform plot. Arrow keys pan, plus and minus zoom, zero fits. Signal values at the cursor are listed beside each name."></canvas></div>
+      </div>
+    </section>
+  </div>
+</main>
+
+<dialog id="about" aria-labelledby="about-h">
+  <h2 id="about-h">Verilog Interpreter</h2>
+  <p>An event-driven, 4-state (0, 1, x, z) Verilog-2001 simulator written in plain JavaScript. Your code is simulated on this device; nothing is uploaded.</p>
+  <h3>How to use it</h3>
+  <ul>
+    <li>Write one or more modules. Any module that nobody instantiates is run as a top-level testbench.</li>
+    <li><kbd>Ctrl</kbd>+<kbd>Enter</kbd> runs. End the simulation with <code>$finish</code>, or press Stop.</li>
+    <li>In the waveform view drag to pan, <kbd>Ctrl</kbd>+scroll or <kbd>+</kbd>/<kbd>−</kbd> to zoom, hover to read values.</li>
+    <li>In the editor <kbd>Tab</kbd> indents; press <kbd>Esc</kbd> first to move focus out with <kbd>Tab</kbd>.</li>
+  </ul>
+  <h3>Supported</h3>
+  <p>Modules, parameters and overrides, ANSI and classic port lists, <code>generate</code> for/if/case, hierarchical names, gate primitives, continuous assignments with delays, tri-state and multi-driver wires, <code>inout</code> ports, <code>always</code>/<code>initial</code>, blocking and nonblocking assignments, delays and event controls, <code>wait</code>, <code>fork</code>/<code>join</code>, named events, <code>disable</code>, functions and tasks, memories, signed arithmetic, reals, <code>`define</code>/<code>`ifdef</code>/<code>`timescale</code>, and <code>$display $write $strobe $monitor $time $realtime $timeformat $random $signed $unsigned $clog2 $bits $sformat $finish</code>.</p>
+  <h3>Not supported</h3>
+  <p><code>$readmemh</code>/<code>$readmemb</code> and file I/O, <code>`include</code>, user-defined primitives, <code>specify</code> timing, drive strengths, <code>defparam</code>, <code>force</code>/<code>release</code>, arrays of instances, and SystemVerilog.</p>
+  <p>Results are checked against <a href="https://steveicarus.github.io/iverilog/" target="_blank" rel="noopener">Icarus Verilog</a>. Source and tests: <a href="https://github.com/GOODMAN-PRO/verilog-interpreter" target="_blank" rel="noopener">github.com/GOODMAN-PRO/verilog-interpreter</a>.</p>
+  <form method="dialog"><button class="btn primary">Close</button></form>
+</dialog>
+
+<script type="text/plain" class="example" data-name="Counter">// A 4-bit counter with synchronous reset and enable, and a testbench that watches it.
+module counter #(parameter WIDTH = 4) (
+  input  wire             clk,
+  input  wire             rst,
+  input  wire             en,
+  output reg  [WIDTH-1:0] count
+);
+  always @(posedge clk) begin
+    if (rst)     count <= 0;
+    else if (en) count <= count + 1;
+  end
+endmodule
+
+module tb;
+  reg clk = 0, rst = 1, en = 0;
+  wire [3:0] count;
+
+  counter dut (.clk(clk), .rst(rst), .en(en), .count(count));
+
+  always #5 clk = ~clk;            // one clock period = 10 time units
+
+  initial begin
+    $monitor("t=%0t  rst=%b en=%b count=%d", $time, rst, en, count);
+    #12  rst = 0;
+    #10  en  = 1;
+    #100 en  = 0;
+    #20  $finish;
+  end
+endmodule
+</script>
+
+<script type="text/plain" class="example" data-name="Ripple-carry adder (gates + generate)">// An 8-bit adder built from gate-level full adders with a generate loop,
+// checked against the + operator.
+module full_adder (input a, b, cin, output sum, cout);
+  wire p, g, t;
+  xor (p, a, b);
+  xor (sum, p, cin);
+  and (g, a, b);
+  and (t, p, cin);
+  or  (cout, g, t);
+endmodule
+
+module ripple_adder #(parameter N = 8) (
+  input  [N-1:0] a, b,
+  input          cin,
+  output [N-1:0] sum,
+  output         cout
+);
+  wire [N:0] c;
+  assign c[0] = cin;
+  assign cout = c[N];
+
+  genvar i;
+  generate
+    for (i = 0; i < N; i = i + 1) begin : stage
+      full_adder fa (.a(a[i]), .b(b[i]), .cin(c[i]), .sum(sum[i]), .cout(c[i+1]));
+    end
+  endgenerate
+endmodule
+
+module tb;
+  reg  [7:0] a, b;
+  reg        cin;
+  wire [7:0] sum;
+  wire       cout;
+  integer    i, errors;
+
+  ripple_adder #(.N(8)) dut (a, b, cin, sum, cout);
+
+  initial begin
+    errors = 0;
+    for (i = 0; i < 12; i = i + 1) begin
+      a = i * 37 + 5;  b = i * 91 + 200;  cin = i[0];
+      #10;
+      if ({cout, sum} !== a + b + cin) begin
+        errors = errors + 1;
+        $display("WRONG  %d + %d + %b = %d", a, b, cin, {cout, sum});
+      end else
+        $display("%d + %d + %b = %d", a, b, cin, {cout, sum});
+    end
+    if (errors == 0) $display("All sums are correct.");
+    $finish;
+  end
+endmodule
+</script>
+
+<script type="text/plain" class="example" data-name="Blocking vs nonblocking">// The classic: = takes effect immediately, <= takes effect after every
+// right-hand side in the time step has been read.
+module tb;
+  reg clk = 0;
+  reg [3:0] a, b, c, d;
+
+  always #5 clk = ~clk;
+
+  // Nonblocking: both right-hand sides are sampled first, so a and b swap.
+  always @(posedge clk) begin
+    a <= b;
+    b <= a;
+  end
+
+  // Blocking: c is overwritten before d reads it, so both end up the same.
+  always @(posedge clk) begin
+    c = d;
+    d = c;
+  end
+
+  initial begin
+    a = 1; b = 2; c = 1; d = 2;
+    $display("time   a b   c d");
+    $monitor("%4t   %0d %0d   %0d %0d", $time, a, b, c, d);
+    #32 $finish;
+  end
+endmodule
+</script>
+
+<script type="text/plain" class="example" data-name="Traffic light (state machine)">// A Moore state machine: the light depends only on the current state.
+module traffic_light (input clk, input rst, output reg [1:0] light);
+  localparam RED = 2'd0, GREEN = 2'd1, YELLOW = 2'd2;
+  reg [1:0] state;
+  reg [3:0] timer;
+
+  always @(posedge clk) begin
+    if (rst) begin
+      state <= RED;
+      timer <= 0;
+    end else begin
+      timer <= timer + 1;
+      case (state)
+        RED:     if (timer == 4) begin state <= GREEN;  timer <= 0; end
+        GREEN:   if (timer == 5) begin state <= YELLOW; timer <= 0; end
+        YELLOW:  if (timer == 1) begin state <= RED;    timer <= 0; end
+        default: state <= RED;
+      endcase
+    end
+  end
+
+  always @(*) light = state;
+endmodule
+
+module tb;
+  reg clk = 0, rst = 1;
+  wire [1:0] light;
+
+  traffic_light dut (clk, rst, light);
+
+  always #5 clk = ~clk;
+
+  always @(light)
+    case (light)
+      2'd0: $display("%4t  RED", $time);
+      2'd1: $display("%4t  GREEN", $time);
+      2'd2: $display("%4t  YELLOW", $time);
+    endcase
+
+  initial begin
+    #12  rst = 0;
+    #300 $finish;
+  end
+endmodule
+</script>
+
+<script type="text/plain" class="example" data-name="ALU with a self-checking task">// A small ALU and a testbench that uses a task to apply inputs and check results.
+module alu (
+  input      [7:0] a, b,
+  input      [2:0] op,
+  output reg [7:0] y,
+  output           zero
+);
+  always @(*) begin
+    case (op)
+      3'b000: y = a + b;
+      3'b001: y = a - b;
+      3'b010: y = a & b;
+      3'b011: y = a | b;
+      3'b100: y = a ^ b;
+      3'b101: y = a << b[2:0];
+      3'b110: y = a >> b[2:0];
+      3'b111: y = ($signed(a) < $signed(b)) ? 8'd1 : 8'd0;
+    endcase
+  end
+  assign zero = (y == 0);
+endmodule
+
+module tb;
+  reg  [7:0] a, b;
+  reg  [2:0] op;
+  wire [7:0] y;
+  wire       zero;
+  integer    pass, fail;
+
+  alu dut (a, b, op, y, zero);
+
+  task check(input [7:0] x, input [7:0] z, input [2:0] f, input [7:0] want);
+    begin
+      a = x; b = z; op = f;
+      #1;
+      if (y === want) pass = pass + 1;
+      else begin
+        fail = fail + 1;
+        $display("FAIL  op=%b a=%h b=%h: got %h, wanted %h", f, x, z, y, want);
+      end
+    end
+  endtask
+
+  initial begin
+    pass = 0; fail = 0;
+    check(8'd15, 8'd27, 3'b000, 8'd42);
+    check(8'd15, 8'd27, 3'b001, 8'hF4);
+    check(8'hF0, 8'h3C, 3'b010, 8'h30);
+    check(8'hF0, 8'h3C, 3'b011, 8'hFC);
+    check(8'hF0, 8'h3C, 3'b100, 8'hCC);
+    check(8'h03, 8'd4,  3'b101, 8'h30);
+    check(8'h80, 8'd7,  3'b110, 8'h01);
+    check(8'hFF, 8'h01, 3'b111, 8'd1);     // -1 < 1 when both are treated as signed
+    check(8'd7,  8'd7,  3'b001, 8'd0);
+    $display("%0d checks passed, %0d failed. zero flag = %b", pass, fail, zero);
+    $finish;
+  end
+endmodule
+</script>
+
+<script type="text/plain" class="example" data-name="UART transmitter">// UART transmitter: 1 start bit, 8 data bits (LSB first), 1 stop bit.
+// Watch tx in the waveform view after running.
+module uart_tx #(parameter CLKS_PER_BIT = 4) (
+  input            clk,
+  input            rst,
+  input            start,
+  input      [7:0] data,
+  output reg       tx,
+  output           busy
+);
+  localparam IDLE = 2'd0, START = 2'd1, DATA = 2'd2, STOP = 2'd3;
+  reg [1:0] state;
+  reg [7:0] shift;
+  reg [2:0] bit_index;
+  reg [7:0] clk_count;
+
+  wire tick = (clk_count == CLKS_PER_BIT - 1);
+  assign busy = (state != IDLE);
+
+  always @(posedge clk) begin
+    if (rst) begin
+      state <= IDLE; tx <= 1'b1; clk_count <= 0; bit_index <= 0;
+    end else begin
+      case (state)
+        IDLE: begin
+          tx <= 1'b1; clk_count <= 0; bit_index <= 0;
+          if (start) begin shift <= data; state <= START; end
+        end
+        START: begin
+          tx <= 1'b0;
+          if (tick) begin clk_count <= 0; state <= DATA; end
+          else clk_count <= clk_count + 1;
+        end
+        DATA: begin
+          tx <= shift[bit_index];
+          if (tick) begin
+            clk_count <= 0;
+            if (bit_index == 7) state <= STOP;
+            else bit_index <= bit_index + 1;
+          end else clk_count <= clk_count + 1;
+        end
+        STOP: begin
+          tx <= 1'b1;
+          if (tick) begin clk_count <= 0; state <= IDLE; end
+          else clk_count <= clk_count + 1;
+        end
+      endcase
+    end
+  end
+endmodule
+
+module tb;
+  reg clk = 0, rst = 1, start = 0;
+  reg [7:0] data = 0;
+  wire tx, busy;
+
+  uart_tx #(.CLKS_PER_BIT(4)) dut (clk, rst, start, data, tx, busy);
+
+  always #5 clk = ~clk;
+
+  task send(input [7:0] value);
+    begin
+      @(negedge clk); data = value; start = 1;
+      @(negedge clk); start = 0;
+      wait (busy);
+      wait (!busy);
+      $display("%0t: sent %h ('%c')", $time, value, value);
+    end
+  endtask
+
+  initial begin
+    #22 rst = 0;
+    send("H");
+    send("i");
+    #20 $finish;
+  end
+endmodule
+</script>
+
+<script src="verilog.js"></script>
+<script>
+'use strict';
+const $ = id => document.getElementById(id);
+const src = $('src'), gutter = $('gutter'), out = $('out'), errBox = $('err'), statusEl = $('status'), mark = $('mark');
+const LH = 20, PAD = 10, KEY = 'verilog-interpreter:source';
+const store = { get() { try { return localStorage.getItem(KEY); } catch (e) { return null; } }, set(v) { try { localStorage.setItem(KEY, v); } catch (e) { /* private mode */ } } };
+
+// ── editor ──
+let errLine = 0, dirty = false, escTab = false;
+function syncGutter() {
+  const n = src.value.split('\n').length;
+  if (gutter.dataset.n != n) { let s = ''; for (let i = 1; i <= n; i++) s += i + '\n'; gutter.textContent = s; gutter.dataset.n = n; }
+  gutter.scrollTop = src.scrollTop;
+  const y = PAD + (errLine - 1) * LH - src.scrollTop;
+  mark.style.display = errLine && y > -LH && y < src.clientHeight ? 'block' : 'none';
+  mark.style.top = y + 'px';
+}
+function caret() { const before = src.value.slice(0, src.selectionStart).split('\n'); $('pos').textContent = `Ln ${before.length}, Col ${before[before.length - 1].length + 1}`; }
+function gotoLine(n) {
+  const lines = src.value.split('\n'); let a = 0;
+  for (let i = 0; i < n - 1 && i < lines.length; i++) a += lines[i].length + 1;
+  src.focus(); src.setSelectionRange(a, a + (lines[n - 1] || '').length);
+  src.scrollTop = Math.max(0, (n - 4) * LH); syncGutter(); caret();
+}
+function setSource(text) { src.value = text; errLine = 0; src.scrollTop = 0; syncGutter(); caret(); }
+src.addEventListener('input', () => { dirty = true; errLine = 0; syncGutter(); store.set(src.value); });
+src.addEventListener('scroll', syncGutter);
+for (const ev of ['keyup', 'click', 'focus']) src.addEventListener(ev, caret);
+src.addEventListener('keydown', e => {
+  if (e.key === 'Escape') { escTab = true; return; }
+  if (e.key === 'Tab' && !escTab && !e.ctrlKey && !e.metaKey && !e.altKey) {
+    e.preventDefault();
+    if (!document.execCommand('insertText', false, '  ')) src.setRangeText('  ', src.selectionStart, src.selectionEnd, 'end');
+    src.dispatchEvent(new Event('input'));
+  }
+  escTab = false;
+});
+window.addEventListener('resize', syncGutter);
+
+// ── examples ──
+const examples = [...document.querySelectorAll('script.example')].map(s => ({ name: s.dataset.name, text: s.textContent }));
+const sel = $('examples');
+sel.add(new Option('Choose…', ''));
+examples.forEach((ex, i) => sel.add(new Option(ex.name, i)));
+sel.addEventListener('change', () => {
+  if (sel.value === '') return;
+  if (dirty && !confirm('Replace the code in the editor with this example?')) { sel.value = ''; return; }
+  setSource(examples[sel.value].text); dirty = false; store.set(src.value);
+});
+const saved = store.get();
+if (saved && saved.trim()) setSource(saved); else { setSource(examples[0].text); sel.value = '0'; }
+dirty = !!(saved && saved.trim()) && !examples.some(e => e.text === saved);
+
+// ── running ──
+let worker = null, running = false, gotOutput = false;
+const OPTS = { maxOps: 3e7, maxOutput: 1e6 };
+function setRunning(on) { running = on; $('stop').disabled = !on; $('run').disabled = on; }
+function append(text) {
+  if (!text) return;
+  const stick = out.scrollHeight - out.scrollTop - out.clientHeight < 40;
+  if (!gotOutput) { out.textContent = ''; gotOutput = true; }
+  out.append(text);
+  if (stick) out.scrollTop = out.scrollHeight;
+}
+function hint(text) { out.textContent = ''; const s = document.createElement('span'); s.className = 'hint'; s.textContent = text; out.append(s); }
+function unitOf(prec) { return { 0: '', '-3': ' ms', '-6': ' us', '-9': ' ns', '-12': ' ps', '-15': ' fs' }[prec] ?? ` ×1e${prec} s`; }
+function done(m) {
+  if (worker) { worker.terminate(); worker = null; }
+  setRunning(false);
+  const ms = m.ms ? ` · ${m.ms < 1000 ? Math.round(m.ms) + ' ms' : (m.ms / 1000).toFixed(1) + ' s'}` : '';
+  const at = m.time !== undefined ? ` at t = ${m.time}${m.waves ? unitOf(m.waves.prec) : ''}` : '';
+  if (m.error) {
+    statusEl.textContent = 'Error' + ms;
+    errBox.textContent = m.error; errBox.hidden = false;
+    if (m.errorLine) {
+      errLine = m.errorLine; syncGutter();
+      const b = document.createElement('button'); b.textContent = `Go to line ${m.errorLine}`; b.onclick = () => gotoLine(m.errorLine); errBox.append(b);
+    }
+  } else statusEl.textContent = (m.finished ? 'Finished' : m.stopped ? `Stopped (${m.stopped})` : 'No more events') + at + ms;
+  if (!gotOutput) hint(m.error ? '' : 'The simulation printed nothing. Use $display("...") to print, and look at the waveforms below.');
+  showWaves(m.waves || null);
+}
+function runInline(source) {                // no Worker (e.g. opened from file://): run on this thread
+  setTimeout(() => {
+    const t0 = performance.now();
+    let r;
+    try { r = Verilog.run(source, { ...OPTS, maxOps: 5e6 }); } catch (e) { r = { output: '', error: 'internal error: ' + e.message }; }
+    append(r.output); done({ ...r, ms: performance.now() - t0 });
+  }, 20);
+}
+function run() {
+  if (running) return;
+  gotOutput = false; errBox.hidden = true; errBox.textContent = ''; errLine = 0; syncGutter();
+  hint('Running…'); statusEl.textContent = 'Running…'; setRunning(true);
+  const source = src.value;
+  let started = false;
+  try { worker = new Worker('worker.js'); } catch (e) { worker = null; }
+  if (!worker) return runInline(source);
+  worker.onmessage = e => { started = true; if (e.data.type === 'out') append(e.data.text); else done(e.data); };
+  worker.onerror = e => { e.preventDefault(); if (worker) worker.terminate(); worker = null; if (started) done({ error: 'internal error: ' + (e.message || 'the simulator crashed') }); else runInline(source); };
+  worker.postMessage({ source, opts: OPTS });
+}
+function stop() {
+  if (!running) return;
+  if (worker) { worker.terminate(); worker = null; }
+  setRunning(false); statusEl.textContent = 'Stopped';
+  if (!gotOutput) hint('Stopped before anything was printed.');
+}
+$('run').addEventListener('click', run);
+$('stop').addEventListener('click', stop);
+$('help').addEventListener('click', () => $('about').showModal());
+document.addEventListener('keydown', e => { if ((e.ctrlKey || e.metaKey) && e.key === 'Enter') { e.preventDefault(); run(); } });
+
+// ── waveforms ──
+const ROW = 28, AXIS = 24;
+const W = { data: null, rows: [], t0: 0, t1: 1, maxT: 1, cursor: null, radix: 'hex', filter: '' };
+const cv = $('wave');
+function fmtVal(s, v) {
+  if (s.real || s.w === 1 || W.radix === 'bin') return v;
+  const known = !/[xz]/.test(v);
+  if (W.radix === 'dec') {
+    if (!known) return /^x+$/.test(v) ? 'x' : /^z+$/.test(v) ? 'z' : 'X';
+    let n = BigInt('0b' + v); if (s.signed && v[0] === '1') n -= 1n << BigInt(s.w);
+    return n.toString();
+  }
+  if (known) return BigInt('0b' + v).toString(16).padStart(Math.ceil(s.w / 4), '0');
+  let h = ''; const p = v.padStart(Math.ceil(s.w / 4) * 4, '0');
+  for (let i = 0; i < p.length; i += 4) { const n = p.slice(i, i + 4); h += /^[01]+$/.test(n) ? parseInt(n, 2).toString(16) : /^x+$/.test(n) ? 'x' : /^z+$/.test(n) ? 'z' : n.includes('x') ? 'X' : 'Z'; }
+  return h;
+}
+function idxAt(ch, t) { let lo = 0, hi = ch.length - 1; while (lo < hi) { const m = (lo + hi + 1) >> 1; if (ch[m][0] <= t) lo = m; else hi = m - 1; } return lo; }
+function showWaves(w) {
+  W.data = w && w.signals.length ? w : null;
+  $('wempty').hidden = !!W.data; $('wnames').hidden = !W.data; $('wcanvas').hidden = !W.data;
+  if (!W.data) { $('wempty').textContent = w ? 'This design has no signals to plot.' : 'Waveforms of every wire and reg appear here after a run.'; $('readout').textContent = ''; return; }
+  W.maxT = Math.max(1, w.end) * 1.03 + 1; W.t0 = 0; W.t1 = W.maxT; W.cursor = null;
+  buildRows();
+}
+function buildRows() {
+  if (!W.data) return;
+  const f = W.filter.trim().toLowerCase(), all = W.data.signals.filter(s => !f || s.name.toLowerCase().includes(f));
+  W.rows = all.slice(0, 200);
+  const box = $('wnames'); box.textContent = '';
+  for (const s of W.rows) {
+    const d = document.createElement('div'); d.className = 'wn'; d.title = `${s.name}${s.w > 1 ? ` [${s.w} bits]` : ''}`;
+    const cut = s.name.lastIndexOf('.') + 1, nm = document.createElement('span'), bdi = document.createElement('bdi'), sc = document.createElement('i'), v = document.createElement('span');
+    nm.className = 'nm'; sc.textContent = s.name.slice(0, cut); bdi.append(sc, s.name.slice(cut)); nm.append(bdi);
+    v.className = 'wv'; d.append(nm, v); box.append(d); s.el = v;
+  }
+  if (all.length > W.rows.length) { const d = document.createElement('div'); d.className = 'wn'; d.textContent = `… ${all.length - W.rows.length} more (use the filter)`; box.append(d); }
+  draw();
+}
+function view(t0, t1) {
+  const span = Math.min(Math.max(t1 - t0, 4), W.maxT);
+  W.t0 = Math.min(Math.max(t0, 0), W.maxT - span); W.t1 = W.t0 + span; draw();
+}
+function zoom(f, at) { const c = at === undefined ? (W.t0 + W.t1) / 2 : at; view(c - (c - W.t0) * f, c + (W.t1 - c) * f); }
+function niceStep(raw) { if (raw <= 1) return 1; const p = 10 ** Math.floor(Math.log10(raw)), m = raw / p; return (m <= 1 ? 1 : m <= 2 ? 2 : m <= 5 ? 5 : 10) * p; }
+function draw() {
+  if (!W.data) return;
+  const cssW = $('wcanvas').clientWidth, cssH = AXIS + W.rows.length * ROW + 1;
+  if (cssW < 4) return;
+  const dpr = Math.min(window.devicePixelRatio || 1, Math.sqrt(12e6 / (cssW * cssH)));
+  cv.width = Math.round(cssW * dpr); cv.height = Math.round(cssH * dpr); cv.style.height = cssH + 'px';
+  const c = cv.getContext('2d'), css = getComputedStyle(document.documentElement), col = n => css.getPropertyValue(n).trim();
+  c.setTransform(dpr, 0, 0, dpr, 0, 0);
+  const span = W.t1 - W.t0, X = t => (t - W.t0) / span * cssW, unit = unitOf(W.data.prec);
+  const cBit = col('--w-bit'), cBus = col('--w-bus'), cX = col('--w-x'), cZ = col('--w-z'), cGrid = col('--w-grid'), cInk = col('--ink'), cMuted = col('--muted');
+  c.font = '11px ' + col('--mono'); c.textBaseline = 'middle'; c.lineWidth = 1;
+  const step = niceStep(span / Math.max(2, cssW / 90));
+  for (let t = Math.ceil(W.t0 / step) * step; t <= W.t1; t += step) {
+    const x = Math.round(X(t)) + 0.5;
+    c.strokeStyle = cGrid; c.beginPath(); c.moveTo(x, AXIS - 5); c.lineTo(x, cssH); c.stroke();
+    c.fillStyle = cMuted; c.fillText(String(Math.round(t)), x + 4, AXIS / 2);
+  }
+  W.rows.forEach((s, i) => {
+    const y0 = AXIS + i * ROW, hi = y0 + 6.5, lo = y0 + ROW - 6.5, mid = (hi + lo) / 2, ch = s.changes, bit = s.w === 1 && !s.real;
+    c.strokeStyle = cGrid; c.lineWidth = 1; c.beginPath(); c.moveTo(0, y0 + ROW - 0.5); c.lineTo(cssW, y0 + ROW - 0.5); c.stroke();
+    c.lineWidth = 1.5;
+    let py = null, px = -1;
+    if (bit) { c.strokeStyle = cBit; c.beginPath(); }
+    for (let k = idxAt(ch, W.t0); k < ch.length; k++) {
+      const ta = Math.max(ch[k][0], W.t0), tb = Math.min(k + 1 < ch.length ? ch[k + 1][0] : W.maxT, W.t1);
+      if (ta >= W.t1) break;
+      if (tb <= ta) continue;
+      const xa = X(ta), xb = X(tb), v = ch[k][1];
+      if (bit) {
+        if (v === 'x' || v === 'z') {
+          c.stroke();
+          c.fillStyle = v === 'x' ? cX : cZ;
+          if (v === 'x') { c.globalAlpha = 0.3; c.fillRect(xa, hi, Math.max(1, xb - xa), lo - hi); c.globalAlpha = 1; } else c.fillRect(xa, mid - 1, Math.max(1, xb - xa), 2);
+          c.beginPath(); py = null; continue;
+        }
+        const y = v === '1' ? hi : lo;
+        if (py === null) c.moveTo(xa, y); else c.lineTo(xa, y);
+        c.lineTo(xb, y); py = y;
+      } else {
+        const unk = /[xz]/.test(v), colr = !unk || s.real ? cBus : /x/.test(v) ? cX : cZ, wpx = xb - xa;
+        if (wpx < 3) { if (Math.round(xa) !== px) { c.fillStyle = colr; c.fillRect(xa, hi, 1.2, lo - hi); px = Math.round(xa); } continue; }
+        const e = Math.min(3, wpx / 2);
+        c.beginPath(); c.moveTo(xa, mid); c.lineTo(xa + e, hi); c.lineTo(xb - e, hi); c.lineTo(xb, mid); c.lineTo(xb - e, lo); c.lineTo(xa + e, lo); c.closePath();
+        if (unk && !s.real) { c.fillStyle = colr; c.globalAlpha = 0.22; c.fill(); c.globalAlpha = 1; }
+        c.strokeStyle = colr; c.stroke();
+        const label = fmtVal(s, v), room = Math.floor((wpx - 10) / 6.7);
+        if (room >= 1) { c.fillStyle = cInk; c.fillText(label.length <= room ? label : room > 2 ? label.slice(0, room - 1) + '…' : '', xa + 5, mid + 0.5); }
+      }
+    }
+    if (bit) c.stroke();
+  });
+  if (W.cursor !== null && W.cursor >= W.t0 && W.cursor <= W.t1) {
+    const x = Math.round(X(W.cursor)) + 0.5;
+    c.strokeStyle = col('--w-cursor'); c.lineWidth = 1; c.beginPath(); c.moveTo(x, 0); c.lineTo(x, cssH); c.stroke();
+  }
+  const at = W.cursor === null ? W.data.end : W.cursor;
+  for (const s of W.rows) s.el.textContent = fmtVal(s, s.changes[idxAt(s.changes, at)][1]);
+  $('readout').textContent = W.cursor === null ? `end: t = ${W.data.end}${unit}` : `cursor: t = ${W.cursor}${unit}`;
+  if (W.data.truncated) $('readout').textContent += ' · recording limit reached';
+}
+const tAt = e => { const r = cv.getBoundingClientRect(); return W.t0 + (e.clientX - r.left) / r.width * (W.t1 - W.t0); };
+let drag = null;
+cv.addEventListener('pointerdown', e => { if (!W.data) return; drag = { x: e.clientX, t0: W.t0, t1: W.t1, moved: false }; cv.setPointerCapture(e.pointerId); });
+cv.addEventListener('pointermove', e => {
+  if (!W.data) return;
+  if (drag) {
+    const dx = e.clientX - drag.x;
+    if (Math.abs(dx) > 3) drag.moved = true;
+    if (drag.moved) { const dt = -dx / cv.getBoundingClientRect().width * (drag.t1 - drag.t0); view(drag.t0 + dt, drag.t1 + dt); return; }
+  }
+  W.cursor = Math.min(Math.max(Math.round(tAt(e)), 0), W.data.end); draw();
+});
+cv.addEventListener('pointerup', () => { drag = null; });
+cv.addEventListener('pointercancel', () => { drag = null; });
+cv.addEventListener('wheel', e => {
+  if (!W.data) return;
+  if (e.ctrlKey || e.metaKey) { e.preventDefault(); zoom(e.deltaY > 0 ? 1.25 : 0.8, tAt(e)); }
+  else if (Math.abs(e.deltaX) > Math.abs(e.deltaY)) { e.preventDefault(); const dt = e.deltaX / cv.getBoundingClientRect().width * (W.t1 - W.t0); view(W.t0 + dt, W.t1 + dt); }
+}, { passive: false });
+cv.addEventListener('keydown', e => {
+  if (!W.data) return;
+  const span = W.t1 - W.t0;
+  if (e.key === 'ArrowLeft') view(W.t0 - span / 8, W.t1 - span / 8);
+  else if (e.key === 'ArrowRight') view(W.t0 + span / 8, W.t1 + span / 8);
+  else if (e.key === '+' || e.key === '=') zoom(0.7);
+  else if (e.key === '-' || e.key === '_') zoom(1 / 0.7);
+  else if (e.key === '0') view(0, W.maxT);
+  else return;
+  e.preventDefault();
+});
+$('zin').addEventListener('click', () => zoom(0.6));
+$('zout').addEventListener('click', () => zoom(1 / 0.6));
+$('zfit').addEventListener('click', () => { if (W.data) view(0, W.maxT); });
+$('radix').addEventListener('change', e => { W.radix = e.target.value; draw(); });
+$('filter').addEventListener('input', e => { W.filter = e.target.value; buildRows(); });
+new ResizeObserver(draw).observe($('wcanvas'));
+matchMedia('(prefers-color-scheme: dark)').addEventListener('change', draw);
+document.addEventListener('visibilitychange', draw);
+</script>
+<noscript><p style="padding:16px">This page simulates Verilog with JavaScript, which is switched off in your browser.</p></noscript>
+</body>
+</html>

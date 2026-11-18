@@ -1,0 +1,7 @@
+real -1.237500e+01 -12.375000 -12.375
+precise 1.25e-04 -12.375 0.000125
+width |      -12.38|   -1.24e+01|
+string | Verilog|   Verilog|Verilog|
+scope tb.scope
+time |  1.25 ns|1.25 ns| percent=%
+zero 0.000000e+00 0.000000 0

@@ -1,0 +1,16 @@
+casts 254 -2 -7 249
+widths 8 8 16 64
+clog2 0=0
+clog2 1=0
+clog2 2=1
+clog2 3=2
+clog2 4=2
+clog2 5=3
+clog2 6=3
+clog2 7=3
+clog2 8=3
+clog2 9=4
+clog2-wide 32
+real-pos cast=3 assign=4 itor=4.0
+real-neg cast=-3 assign=-4 itor=-4.0
+xz-casts x101zz00 x101zz00

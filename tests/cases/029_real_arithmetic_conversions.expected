@@ -1,0 +1,4 @@
+real 9.50 5.50 15.00 3.75 8.00
+positive round=8 truncate=7 back=7.0
+negative round=-8 truncate=-7 back=-7.0
+compare 1 0 logical=1

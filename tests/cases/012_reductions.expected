@@ -1,0 +1,7 @@
+0000 and=0 nand=1 or=0 nor=1 xor=0 xnor=1/1
+1111 and=1 nand=0 or=1 nor=0 xor=0 xnor=1/1
+1011 and=0 nand=1 or=1 nor=0 xor=1 xnor=0/0
+0xzz and=0 nand=1 or=x nor=x xor=x xnor=x/x
+1xzz and=x nand=x or=1 nor=0 xor=x xnor=x/x
+xxxx and=x nand=x or=x nor=x xor=x xnor=x/x
+zzzz and=x nand=x or=x nor=x xor=x xnor=x/x

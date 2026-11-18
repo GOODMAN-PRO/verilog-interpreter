@@ -1,0 +1,5 @@
+start t=0.0 ns rt=0.00
+round1 t=0.0 ns rt=0.10
+round2 t=0.0 ns rt=0.30
+real t=10.0 ns rt=0.60
+expr t=40.0 ns rt=3.60 st=4

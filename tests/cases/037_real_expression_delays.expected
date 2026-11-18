@@ -1,0 +1,5 @@
+start time=0 realtime=0.0 stamp=0 ticks
+literal time=1 realtime=1.3 stamp=13 ticks
+real time=2 realtime=1.6 stamp=16 ticks
+expression time=5 realtime=4.6 stamp=46 ticks
+zero time=5 realtime=4.6

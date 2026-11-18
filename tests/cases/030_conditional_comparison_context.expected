@@ -1,0 +1,4 @@
+ternary sum=20 signed=fffe mixed=000e
+comparison_context 1 1 0
+merged signed=11111111111111xx mixed=00000000x000xxx0
+precedence 14 20 1 0

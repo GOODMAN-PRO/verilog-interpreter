@@ -1,0 +1,6 @@
+active=1
+strobe=10
+binary:10110011
+hex:c4
+octal:077
+final=63

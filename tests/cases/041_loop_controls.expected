@@ -1,0 +1,7 @@
+for total=10 i=5
+while total=20 count=0
+repeat total=26 count=0
+forever count=1 tick=1 time=2
+forever count=2 tick=0 time=4
+forever count=3 tick=1 time=6
+forever count=4 tick=0 time=8

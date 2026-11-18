@@ -1,0 +1,4 @@
+shift wide=0000010000000000 narrow=00000000
+extend hex=00000000ffffffff decimal=ffffffffffffffff signedhex=ffffffffffffffff
+wide invert=ffffffffffffffff add=0000000100000001
+mixed_unary=ffffffffffffffff signed_literal=ffffffffffffffff

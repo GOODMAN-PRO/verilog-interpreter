@@ -1,0 +1,3 @@
+extend 00fb fffb 00fb 00fb 00fb
+x_extend xxxxxxxxx1000011 00000000x1000011
+z_extend zzzzzzzzz1000011 00000000z1000011

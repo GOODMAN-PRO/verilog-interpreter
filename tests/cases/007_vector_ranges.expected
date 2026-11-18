@@ -1,0 +1,10 @@
+whole 10100110 10100110 10100110 10100110
+ends 10 10 10 10
+index 0 0 1 0 1
+index 1 1 0 1 0
+index 2 1 1 1 1
+index 3 0 0 0 0
+index 4 0 0 0 0
+index 5 1 1 1 1
+index 6 0 1 0 1
+index 7 1 0 1 0

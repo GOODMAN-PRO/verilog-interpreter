@@ -1,0 +1,8 @@
+decimal |2739|2739| 2739| signed |  -5|-5|   -5|
+bases 101010110011 ab3 ab3 5263 signed 11111011 fb 373
+integer |       -123|-123| -123|
+mixed    X X     X xxzz101001xz XaX XaX XZ4X
+all-x    x x     x xxxxxxxxxxxx xxx xxxx
+all-z    z z     z zzzzzzzzzzzz zzz zzzz
+signed-x |   X|X|    X|
+character <A><z> percent=%

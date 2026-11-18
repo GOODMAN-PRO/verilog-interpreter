@@ -1,0 +1,28 @@
+request=0000 accept=1 pointer=0 grant=0000
+after pointer=0 grant=0000
+request=1111 accept=1 pointer=0 grant=0001
+after pointer=1 grant=0010
+request=1111 accept=1 pointer=1 grant=0010
+after pointer=2 grant=0100
+request=1111 accept=1 pointer=2 grant=0100
+after pointer=3 grant=1000
+request=1111 accept=1 pointer=3 grant=1000
+after pointer=0 grant=0001
+request=1111 accept=1 pointer=0 grant=0001
+after pointer=1 grant=0010
+request=1111 accept=1 pointer=1 grant=0010
+after pointer=2 grant=0100
+request=1111 accept=0 pointer=2 grant=0100
+after pointer=2 grant=0100
+request=1111 accept=0 pointer=2 grant=0100
+after pointer=2 grant=0100
+request=1001 accept=1 pointer=2 grant=1000
+after pointer=0 grant=0001
+request=1001 accept=1 pointer=0 grant=0001
+after pointer=1 grant=1000
+request=0100 accept=1 pointer=1 grant=0100
+after pointer=3 grant=0100
+request=0000 accept=1 pointer=3 grant=0000
+after pointer=3 grant=0000
+request=0001 accept=1 pointer=3 grant=0001
+after pointer=1 grant=0001

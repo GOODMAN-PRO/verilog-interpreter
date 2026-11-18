@@ -1,0 +1,12 @@
+load=1 en=1 right=0 serial=1 q=10100110
+load=0 en=0 right=1 serial=1 q=10100110
+load=0 en=1 right=0 serial=0 q=01001100
+load=0 en=1 right=0 serial=1 q=10011001
+load=0 en=1 right=0 serial=0 q=00110010
+load=0 en=1 right=0 serial=1 q=01100101
+load=0 en=1 right=1 serial=1 q=10110010
+load=0 en=1 right=1 serial=0 q=01011001
+load=0 en=1 right=1 serial=1 q=10101100
+load=0 en=1 right=1 serial=0 q=01010110
+load=1 en=0 right=1 serial=0 q=10000001
+load=0 en=1 right=1 serial=0 q=01000000

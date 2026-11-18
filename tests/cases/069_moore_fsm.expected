@@ -1,0 +1,16 @@
+before request=0 release=0 busy=0 done=0
+after state=0 busy=0 done=0
+before request=1 release=0 busy=0 done=0
+after state=1 busy=1 done=0
+before request=0 release=0 busy=1 done=0
+after state=2 busy=0 done=1
+before request=0 release=0 busy=0 done=1
+after state=2 busy=0 done=1
+before request=0 release=1 busy=0 done=1
+after state=0 busy=0 done=0
+before request=1 release=1 busy=0 done=0
+after state=1 busy=1 done=0
+before request=0 release=0 busy=1 done=0
+after state=2 busy=0 done=1
+before request=0 release=1 busy=0 done=1
+after state=0 busy=0 done=0

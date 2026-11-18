@@ -1,0 +1,19 @@
+seed=0001
+step=1 q=0010
+step=2 q=0100
+step=3 q=1001
+step=4 q=0011
+step=5 q=0110
+step=6 q=1101
+step=7 q=1010
+step=8 q=0101
+step=9 q=1011
+step=10 q=0111
+step=11 q=1111
+step=12 q=1110
+step=13 q=1100
+step=14 q=1000
+step=15 q=0001
+step=16 q=0010
+hold=0010
+hold=0010

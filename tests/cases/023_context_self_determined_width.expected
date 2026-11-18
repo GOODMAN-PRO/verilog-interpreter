@@ -1,0 +1,5 @@
+product contextual=91 concat=11 self=11
+quotient contextual=13 self=1
+power contextual=2197 concat=5 self=5
+shift contextual=80 self=0
+reduction_self=1 logical_self=1

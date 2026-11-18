@@ -1,0 +1,7 @@
+x_arith xx xx xx xx xx
+z_arith xx xx xx xx xx
+zero_div xx xx xx xx
+zero_product xx xx
+power_unknown xx xx xx 01
+power_negative 0 -1 x
+unary_unknown 0X xx 0Z xx
