@@ -622,6 +622,15 @@ src.addEventListener('beforeinput', e => {
   if (type === 'insertText' && ch && ch.length === 1) {
     // ponytail: any matching closer is stepped over, not only one the editor added; type it twice to really insert one
     if (a === b && next === ch && (ch === '"' ? text && !escaped(v, a) : !text && ')]}'.includes(ch))) { e.preventDefault(); src.setSelectionRange(a + 1, a + 1); caret(); return; }
+    if (a === b && !text && ')]}'.includes(ch)) {                 // the closer is waiting on a line below, where Enter put it: go to it
+      const gap = /^\s*/.exec(v.slice(a, a + 400))[0], at = a + gap.length, ls = v.lastIndexOf('\n', a - 1) + 1;
+      if (v[at] === ch && gap.includes('\n')) {
+        e.preventDefault();
+        if (v.slice(ls, a).trim()) { src.setSelectionRange(at + 1, at + 1); caret(); }
+        else { const cls = v.lastIndexOf('\n', at - 1) + 1; edit(ls, cls, '', ls + at - cls + 1); }      // the caret's line is empty: take it away
+        return;
+      }
+    }
     if (!PAIR[ch] || text) return;
     if (a !== b) { e.preventDefault(); edit(a, b, ch + v.slice(a, b) + PAIR[ch]); src.setSelectionRange(a + 1, b + 1); }
     else if (/^[\s)\]},;]?$/.test(next) && !(ch === '"' && /[\w"]/.test(v[a - 1] || ''))) { e.preventDefault(); edit(a, a, ch + PAIR[ch], a + 1); }
@@ -641,10 +650,11 @@ function dedent() {
   const v = src.value, a = src.selectionStart, ls = v.lastIndexOf('\n', a - 1) + 1, m = /^([ \t]*)(\w+)$/.exec(v.slice(ls, a)), eol = v.indexOf('\n', a);
   if (a !== src.selectionEnd || !m || !OPENER.hasOwnProperty(m[2]) || inText(a) || v.slice(a, eol < 0 ? v.length : eol).trim()) return;
   const re = new RegExp('\\b(?:' + OPENER[m[2]] + '|' + m[2] + ')\\b', 'g'), lines = v.slice(0, ls).split('\n');
-  for (let i = lines.length - 2, depth = 0; i >= 0; i--) {                          // walk up to the opener that is not closed yet
-    const found = code(lines[i]).match(re) || [];
+  for (let i = lines.length - 2, at = ls, depth = 0; i >= 0; i--) {                 // walk up to the opener that is not closed yet
+    at -= lines[i].length + 1;                                                      // where line i starts
+    const found = [...lines[i].matchAll(re)].filter(x => !inText(at + x.index));    // (words in comments and strings do not count)
     for (let k = found.length - 1; k >= 0; k--) {
-      if (found[k] === m[2]) depth++;
+      if (found[k][0] === m[2]) depth++;
       else if (depth-- === 0) {
         const ind = /^[ \t]*/.exec(lines[i])[0];
         if (ind !== m[1]) edit(ls, ls + m[1].length, ind, a + ind.length - m[1].length);

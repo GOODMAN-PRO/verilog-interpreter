@@ -26,7 +26,7 @@ const CLASS = new Map();            // reserved word -> colour class
 for (const w of KEYWORDS.concat(GATES, SWITCHES, RARE)) CLASS.set(w, 'k');
 for (const w of TYPES) CLASS.set(w, 't');
 const GATE = new Set(GATES.concat(SWITCHES));
-const NO_NAME = new Set(words('`ifdef `ifndef `elsif `undef `default_nettype `timescale'));      // the word after these is not a name of the design
+const NO_NAME = new Set(words('`ifdef `ifndef `elsif `undef `default_nettype'));      // the word after these is not a name of the design
 
 // 1 comment, 2 string (3 its closing quote), 4 directive or macro, 5 system task, 6 number, 7 word, 8 white space, 9 anything else
 const TOKEN = /(\/\/.*|\/\*[\s\S]*?(?:\*\/|$))|("(?:\\.|[^"\\\n])*("?))|(`\w+)|(\$[\w$]+)|((?:\d[\d_]*[ \t]*)?'[sS]?[bBoOdDhH][ \t]*[0-9a-fA-FxXzZ?][0-9a-fA-FxXzZ?_]*|\d[\d_]*(?:\.\d[\d_]*)?(?:[eE][-+]?\d[\d_]*)?)|([A-Za-z_][\w$]*)|(\s+)|([\s\S])/g;
@@ -40,7 +40,7 @@ const esc = s => s.replace(/[&<]/g, c => c === '&' ? '&amp;' : '&lt;');
 // module + instance, "x (" as a call. Wrong guesses only mis-colour a word; use the real parser if that ever matters.
 function highlight(text) {
   const out = [], toks = [], names = new Set(), parens = [];
-  let m, p1 = '', p2 = '', lastId = null, lastEnd = -1, lastDir = '', def = '', macro = false, sq = 0, hashed = false, closed = false, inst = false;
+  let m, p1 = '', p2 = '', lastId = null, lastEnd = -1, lastDir = '', lastDirAt = 0, def = '', macro = false, sq = 0, hashed = false, closed = false, inst = false;
   TOKEN.lastIndex = 0;
   while ((m = TOKEN.exec(text))) {
     const t = m[0], at = m.index;
@@ -50,7 +50,7 @@ function highlight(text) {
     closed = macro = false;
     let c = '', kind = t;
     if (m[2] !== undefined) { c = 'q'; kind = 'str'; toks.push([at, at + t.length, !m[3]]); }
-    else if (m[4] !== undefined) { c = 'd'; kind = 'dir'; macro = t === '`define'; lastDir = t; }
+    else if (m[4] !== undefined) { c = 'd'; kind = 'dir'; macro = t === '`define'; lastDir = t; lastDirAt = at; }
     else if (m[5] !== undefined) { c = 's'; kind = 'sys'; }
     else if (m[6] !== undefined) { c = 'n'; kind = 'num'; }
     else if (m[7] !== undefined) {
@@ -59,9 +59,11 @@ function highlight(text) {
       else if (reserved) {
         c = reserved;
         if (t === 'function' || t === 'task') def = 'f'; else if (t === 'module' || t === 'macromodule' || t === 'primitive') def = 'm';
-      } else {
+      } else if (p1 === 'dir' && NO_NAME.has(lastDir)) { kind = 'dir'; lastDir = ''; }  // `ifdef SIM: SIM is not a name of the design
+      else {
         kind = 'id';
-        if (!(p1 === 'num' && at === lastEnd) && !(p1 === 'dir' && NO_NAME.has(lastDir))) names.add(t);      // not the ns of 1ns, not the SIM of `ifdef SIM
+        // not a time unit: the ns of 1ns anywhere, or of "1 ns" on a `timescale line
+        if (!(p1 === 'num' && (at === lastEnd || (lastDir === '`timescale' && !text.slice(lastDirAt, at).includes('\n'))))) names.add(t);
         PAREN_NEXT.lastIndex = TOKEN.lastIndex;
         if (def && !sq) { c = def; def = ''; }                                         // the name being defined
         else if (p1 === ':' && (p2 === 'begin' || p2 === 'fork')) kind = 'label';      // begin : name
@@ -103,6 +105,8 @@ if (typeof module === 'object' && typeof require === 'function' && require.main 
   const mac = highlight('`define WIDTH 8\nwire [`WIDTH-1:0] bus;');
   assert.ok(mac.names.has('`WIDTH') && mac.names.has('bus') && !mac.names.has('wire'));
   assert.deepStrictEqual([...highlight('`timescale 1ns/1ps\n`default_nettype none\n`ifdef SIM\nmodule t; endmodule').names], ['t']);
+  assert.deepStrictEqual([...highlight('`timescale 1 ns / 1 ps\nmodule t; initial #10 ns = 1; endmodule').names], ['t', 'ns']);
+  assert.deepStrictEqual(['DEBUG', 'check'].map(w => cls('`ifdef DEBUG\n  check(x);\n`endif', w)), ['', 'f']);
   // the coloured text must be exactly the typed text: it is drawn underneath the transparent <textarea>
   const dir = path.join(__dirname, 'tests', 'cases');
   const sources = fs.readdirSync(dir).filter(f => f.endsWith('.v')).map(f => fs.readFileSync(path.join(dir, f), 'utf8'));
