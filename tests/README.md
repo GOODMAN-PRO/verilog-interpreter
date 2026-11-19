@@ -204,3 +204,75 @@
 | [202_gpt2_fmt_zero_other](cases/202_gpt2_fmt_zero_other.v) | Zero-filled %c and %t fields receive spaces. |
 | [203_g1](cases/203_g1.v) | inout ports through two levels of hierarchy with pullup, pulldown and tri1. |
 | [204_tasks_fork_disable_mix](cases/204_tasks_fork_disable_mix.v) | Automatic recursion with memories, a named fork used as a timeout, disable across processes, event-controlled nonblocking assignment. |
+| [205_gpt3_frame_elab_finish](cases/205_gpt3_frame_elab_finish.v) | Allocating an overlapping automatic task frame can execute `$finish` from a constant range. |
+| [206_gpt3_disable_crossed_processes](cases/206_gpt3_disable_crossed_processes.v) | A block that resumes from `disable` cannot cancel the process that disabled it. |
+| [207_gpt3_gen_parent_forward_wire](cases/207_gpt3_gen_parent_forward_wire.v) | A generated assignment drives a later parent wire and loses its own implicit net. |
+| [208_gpt3_gen_localparam_range](cases/208_gpt3_gen_localparam_range.v) | A generated localparam takes its width from a shadowed outer name. |
+| [209_gpt3_sibling_bit_only](cases/209_gpt3_sibling_bit_only.v) | A wired inout changes the resolver on an unconnected sibling bit. |
+| [210_gpt3_netpair_tri0_tri1](cases/210_gpt3_netpair_tri0_tri1.v) | An inout with a different net kind overrides the dominant outer net. |
+| [211_gpt3_only_wired_pulls](cases/211_gpt3_only_wired_pulls.v) | Opposing pulls on a wired net lose the controlling value. |
+| [212_gpt3_struct_concat_rise_event](cases/212_gpt3_struct_concat_rise_event.v) | One vector assignment through an inout generates a false edge. |
+| [213_gpt3_type_name_plain_int](cases/213_gpt3_type_name_plain_int.v) | The SystemVerilog hint rejects a legal Verilog module instance. |
+| [214_gpt3_nested_concat](cases/214_gpt3_nested_concat.v) | A nested net concatenation cannot connect to an inout. |
+| [215_gpt3_fmt_alias](cases/215_gpt3_fmt_alias.v) | An alias of a format-string parameter becomes a decimal number. |
+| [216_gpt3_default_block_comment](cases/216_gpt3_default_block_comment.v) | A trailing block comment invalidates a legal default net type. |
+| [217_gpt3_fmt_hex_zeropad](cases/217_gpt3_fmt_hex_zeropad.v) | Hexadecimal zero filling depends on whether the magnitude contains a decimal digit. |
+| [218_gpt3_fmt_real_sign](cases/218_gpt3_fmt_real_sign.v) | The plus flag disappears for a real operand printed with `%d`. |
+| [219_gpt3_fmt_real_to_char](cases/219_gpt3_fmt_real_to_char.v) | `%c` of an integral-valued real prints an empty character field. |
+| [220_gpt3_fmt_runtime_hex](cases/220_gpt3_fmt_runtime_hex.v) | A real printed in hexadecimal expands to sixteen digits despite a short field. |
+| [221_gpt3_fmt_numeric_empty](cases/221_gpt3_fmt_numeric_empty.v) | A numeric conversion prints a literal blank for an explicit empty operand. |
+| [222_gpt3_fmt_strength_bus](cases/222_gpt3_fmt_strength_bus.v) | `%v` displays only the low bit of a vector. |
+| [223_hunt3_f1](cases/223_hunt3_f1.v) | A pullup inside the child on an output port is treated as a strong driver on the outer net. |
+| [224_hunt3_f4](cases/224_hunt3_f4.v) | An output port declared wor/wand/triand/trior does not make a plain outer wire wired. |
+| [225_hunt3_f5](cases/225_hunt3_f5.v) | A supply1 or supply0 net with a conflicting driver does not win. |
+| [226_hunt3_f02_static_function_return_value](cases/226_hunt3_f02_static_function_return_value.v) | Static function return variable keeps previous call's value instead of resetting to x (0 for real). |
+| [227_hunt3_q05](cases/227_hunt3_q05.v) | Parameter, range or constant function that refers to a parameter declared later is rejected. |
+| [228_hunt3_im1](cases/228_hunt3_im1.v) | A name declared only inside a generate block (or untaken branch) blocks the implicit net at module level. |
+| [229_hunt3_f04_concat_or_ranged_param_format](cases/229_hunt3_f04_concat_or_ranged_param_format.v) | A concatenation of string literals / string parameters, or a ranged parameter initialised with a string, is not used as a format string. |
+| [230_hunt3_forward_param_ref](cases/230_hunt3_forward_param_ref.v) | A parameter cannot refer to a parameter declared later in the module. |
+| [231_hunt3_gl](cases/231_hunt3_gl.v) | Generate loop with more than 65536 iterations is rejected as 'does not terminate'. |
+| [232_hunt3_r03](cases/232_hunt3_r03.v) | $bits of a variable is rejected in a constant expression. |
+| [233_hunt3_f01_fmte_round_boundary](cases/233_hunt3_f01_fmte_round_boundary.v) | %e/%f/%g round up into the wrong decimal exponent for 1e-7 at high precision. |
+| [234_hunt3_f02_d_unknown_zero_plus_flags](cases/234_hunt3_f02_d_unknown_zero_plus_flags.v) | %d/%h of x/z ignores the 0 flag and the + flag. |
+| [235_hunt3_f05_v_multibit](cases/235_hunt3_f05_v_multibit.v) | %v of a multi-bit value prints only the low bit. |
+| [236_hunt3_f06_real_with_integer_conversions](cases/236_hunt3_f06_real_with_integer_conversions.v) | Integer conversions of a real operand: %c prints nothing, %+d drops the sign, %Nh/%No/%Nb zero-pad to 64 bits. |
+| [237_hunt3_f08_t_precision](cases/237_hunt3_f08_t_precision.v) | %t honours a .N precision in the specification; the interpreter ignores it. |
+| [238_hunt3_f09_bare_realtime_arg](cases/238_hunt3_f09_bare_realtime_arg.v) | A bare $realtime argument (no format) is printed with the time precision in Icarus. |
+| [239_hunt3_f11_escapes_a_f_v](cases/239_hunt3_f11_escapes_a_f_v.v) | String escapes \a, \f and \v are not recognised. |
+| [240_hunt3_undriven_bit_event_t0](cases/240_hunt3_undriven_bit_event_t0.v) | @(c[2]) fires at time 0 when a bit of a partly driven wire is undriven. |
+| [241_gpt3_output_side_effect](cases/241_gpt3_output_side_effect.v) | Folding a string conditional skips a runtime function call. |
+| [242_gpt3_param_shadow](cases/242_gpt3_param_shadow.v) | A generated localparam loses the enclosing parameter of the same name. |
+| [243_gpt3_supply_to_wired](cases/243_gpt3_supply_to_wired.v) | A supply output disappears on a declared outer net. |
+| [244_gpt3_selected_output_mirror](cases/244_gpt3_selected_output_mirror.v) | External contention changes the internal value of a selected output. |
+| [245_gpt3_concat_wired_kind](cases/245_gpt3_concat_wired_kind.v) | A one-member concatenation incorrectly transfers the output’s wired resolver. |
+| [246_gpt3_vector_port_scalar_net](cases/246_gpt3_vector_port_scalar_net.v) | A legal vector port following a scalar net declaration is rejected. |
+| [247_gpt3_string_unknown_choice](cases/247_gpt3_string_unknown_choice.v) | An X or Z string selector always chooses the false arm. |
+| [248_gpt3_plain_output_readback](cases/248_gpt3_plain_output_readback.v) | An ordinary collapsed output cannot read external contention. |
+| [249_gpt3_supply_wired_conflict](cases/249_gpt3_supply_wired_conflict.v) | An opposing supply overrides the controlling value of a wired net. |
+| [250_gpt3_mixed_wired](cases/250_gpt3_mixed_wired.v) | Joining two wired kinds uses the wrong resolver. |
+| [251_gpt3_recursive_result](cases/251_gpt3_recursive_result.v) | A nested static function call overwrites its caller’s partial result. |
+| [252_gpt3_plusargs_side_effect](cases/252_gpt3_plusargs_side_effect.v) | A valid plusarg expression loses its function call. |
+| [253_gpt3_bits_memory](cases/253_gpt3_bits_memory.v) | A runtime width query on a whole memory rejects a valid argument. |
+| [254_gpt3_directive_empty_macro](cases/254_gpt3_directive_empty_macro.v) | An empty macro after a valid unconnected-drive polarity is rejected. |
+| [255_gpt3_typed_string](cases/255_gpt3_typed_string.v) | An exactly fitting integer parameter loses its string value for display. |
+| [256_gpt3_ceil_signed_zero](cases/256_gpt3_ceil_signed_zero.v) | $ceil clears the sign of a computed negative-zero input. |
+| [257_gpt3_time_precision](cases/257_gpt3_time_precision.v) | An explicit time precision above forty digits is truncated. |
+| [258_gpt3_unary_plus_text](cases/258_gpt3_unary_plus_text.v) | Unary plus turns a string argument into decimal display text. |
+| [259_hunt3_f1](cases/259_hunt3_f1.v) | A task or function port redeclared with a range is rejected (new scalar-port check too broad). |
+| [260_hunt3_min_tern_x_condition](cases/260_hunt3_min_tern_x_condition.v) | Constant ?: with an x condition is treated as false text (prints cd; Icarus and old engine print X). |
+| [261_hunt3_min_neg_zero_param](cases/261_hunt3_min_neg_zero_param.v) | Negation or $ceil in a real parameter (constant expression) gives +0.0; Icarus and old engine give -0.0. |
+| [262_hunt3_min_tern_function_condition](cases/262_hunt3_min_tern_function_condition.v) | User-function call in a constant ?: condition is folded, so the result prints as text. |
+| [263_hunt3_reg_ceil_neg_zero](cases/263_hunt3_reg_ceil_neg_zero.v) | $ceil of a run-time real in (-1,0) prints 0.0 instead of -0.0. |
+| [264_hunt3_f3b](cases/264_hunt3_f3b.v) | A generate loop of 10000 single-bit assigns into one vector is cubic and times out. |
+| [265_hunt3_wor_port_full_select](cases/265_hunt3_wor_port_full_select.v) | wand/wor output port connected to a select spanning the whole net loses its wired kind. |
+| [266_hunt3_min_wired_through_plain_port](cases/266_hunt3_min_wired_through_plain_port.v) | A port's wired kind is lost when it passes through an ordinary intermediate output port onto a select or concatenation. |
+| [267_hunt3_min_integer_param_text](cases/267_hunt3_min_integer_param_text.v) | parameter integer I = "abcd" (exactly 32 bits) is a number in the interpreter, text in Icarus. |
+| [268_hunt3_f4](cases/268_hunt3_f4.v) | A generate loop with more than about 125000 continuous assigns gives a misleading stack-limit error. |
+| [269_hunt3_f7](cases/269_hunt3_f7.v) | `unconnected_drive followed by a macro is rejected. |
+| [270_hunt3_old_fork_in_function](cases/270_hunt3_old_fork_in_function.v) | fork/join inside a function is rejected. |
+| [271_probe3_n3](cases/271_probe3_n3.v) | a pullup inside a module on its output port, through two levels, with and without an outer driver. |
+| [272_probe3_n6](cases/272_probe3_n6.v) | pulls on single bits of an output port connected to a part-select and to a concatenation; supply nets. |
+| [273_probe3_n7](cases/273_probe3_n7.v) | wired-OR ports connected to a whole net, a part-select, a bit-select and a concatenation. |
+| [274_probe3_inc](cases/274_probe3_inc.v) | per-bit generate assigns into one vector next to overlapping drivers and a wor net. |
+| [275_probe3_f2](cases/275_probe3_f2.v) | a bare $realtime argument under three different timescales. |
+| [276_probe3_f3](cases/276_probe3_f3.v) | the + and 0 flags of %d with known, x and z values. |

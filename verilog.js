@@ -69,11 +69,11 @@ function wired(p, q, f) {               // wand / wor resolution: z yields, othe
   const r = f(P, Q, p.w, m);
   return both ? V(p.w, r.a & ~both, r.b | both) : r;
 }
-function pulled(r, p) {                 // tri0 / tri1 / pullup / pulldown fill the bits nobody drives; opposing pulls give x
-  const z = ~r.a & r.b, up = z & p.up, dn = z & p.dn;
+const mix = (r, q, m) => m ? V(r.w, (r.a & ~m) | (q.a & m), (r.b & ~m) | (q.b & m)) : r;      // r, with the bits selected by m taken from q
+function pulled(r, up, dn) {            // tri0 / tri1 / pullup / pulldown fill the bits nobody drives; opposing pulls give x
+  const z = ~r.a & r.b; up &= z; dn &= z;
   return up || dn ? V(r.w, r.a | up, r.b & ~(up ^ dn)) : r;
 }
-const pullVec = (w, p) => V(w, p.up, (p.up & p.dn) | (mask(w) & ~(p.up | p.dn)));   // the pulls as one more driver (for wand / wor)
 function strToV(s, w) {
   let a = 0n;
   for (let i = 0; i < s.length; i++) a = (a << 8n) | BigInt(s.charCodeAt(i) & 255);
@@ -147,7 +147,7 @@ REDUCE['~^'] = REDUCE['^~'] = (v, m) => inv1(REDUCE['^'](v, m));
 function padNum(s, width, zero, left) {
   if (width === undefined) return s;
   if (left) return s.padEnd(width);
-  if (!zero || !/\d/.test(s)) return s.padStart(width);
+  if (!zero || /^[-+]?(inf|nan)$/.test(s)) return s.padStart(width);
   const sign = s[0] === '-' || s[0] === '+' ? s[0] : '';
   return sign + s.slice(sign.length).padStart(width - sign.length, '0');
 }
@@ -156,7 +156,8 @@ function fmtVec(base, v, signed, width, zero, left, plus) {
   if (base === 'd') {
     nat = signed ? (1n << BigInt(v.w - 1)).toString().length + 1 : mask(v.w).toString().length;
     if (v.b) { const m = mask(v.w); s = v.b === m && v.a === m ? 'x' : v.b === m && v.a === 0n ? 'z' : (v.a & v.b) ? 'X' : 'Z'; }
-    else { s = (signed ? sbig(v) : v.a).toString(); if (plus && s[0] !== '-') s = '+' + s; }
+    else s = (signed ? sbig(v) : v.a).toString();
+    if (plus && s[0] !== '-') s = '+' + s;
   } else {
     const bits = base === 'b' ? 1 : base === 'o' ? 3 : 4;
     nat = Math.ceil(v.w / bits); s = '';
@@ -196,6 +197,8 @@ function fmtE(r, p) {
   if (r !== 0) {
     k = Math.floor(Math.log10(Math.abs(r)));
     for (;;) { d = decDigits(r, p - k).toString(); if (d.length > p + 1) k++; else if (d.length < p + 1) k--; else break; }
+    const lo = decDigits(r, p - k + 1).toString();                    // Math.log10 may round up to the next decade
+    if (lo.length === p + 1) { d = lo; k--; }
   }
   return (isNeg(r) ? '-' : '') + d[0] + (p ? '.' + d.slice(1) : '') + 'e' + (k < 0 ? '-' : '+') + String(Math.abs(k)).padStart(2, '0');
 }
@@ -274,6 +277,7 @@ function lex(src) {
       const e = src[i++];
       if (e === 'n') s += '\n';
       else if (e === 't') s += '\t';
+      else if (e === 'a') s += '\x07'; else if (e === 'f') s += '\f'; else if (e === 'v') s += '\v';
       else if (e === '\n') line++;                                      // backslash-newline continues the string on the next line
       else if (e === '\r' && src[i] === '\n') { i++; line++; }
       else if (e >= '0' && e <= '7') { let o = e; while (o.length < 3 && src[i] >= '0' && src[i] <= '7') o += src[i++]; s += String.fromCharCode(parseInt(o, 8) & 255); }
@@ -314,14 +318,15 @@ function lex(src) {
         return;
       }
       case 'default_nettype': {
-        const m = /^\s*(\w+)\s*$/.exec(restOfLine().replace(/\/\/.*$/, ''));
+        const m = /^\s*(\w+)\s*$/.exec(restOfLine().replace(/\/\*.*?\*\//g, ' ').replace(/\/\/.*$/, ''));
         if (!m || !(m[1] === 'none' || (NETS.has(m[1]) && !m[1].startsWith('supply')))) err('`default_nettype must be followed by wire, tri, tri0, tri1, wand, triand, wor, trior or none');
         if (inMod) err('`default_nettype cannot appear inside a module');
         nettype = m[1]; return;
       }
       case 'unconnected_drive': {
-        const m = /^\s*(pull0|pull1)\b/.exec(restOfLine());
-        if (!m) err('`unconnected_drive must be followed by pull0 or pull1');
+        const m = /^\s*(pull0|pull1)\b(.*)$/.exec(restOfLine().replace(/`(\w+)/g, (t, q) => { const d = defs.get(q); return d && !d.args ? d.body : t; }));
+        if (!m || m[2].replace(/\/\*.*?\*\//g, ' ').replace(/\/\/.*$/, '').replace(/`\w+/g, '').trim()) err('`unconnected_drive must be followed by pull0 or pull1 (and nothing else on the line)');
+        if (inMod) err('`unconnected_drive cannot appear inside a module');
         ud = m[1]; return;
       }
       case 'nounconnected_drive': ud = null; return;
@@ -497,6 +502,7 @@ class Parser {
       this.need('(');
       let head = { signed: false, range: null, ptype: null };
       do {
+        if (this.at('localparam')) this.err("'localparam' inside the #( ) list is SystemVerilog; in Verilog-2001 declare it in the module body");
         if (this.eat('parameter') || this.at('signed') || this.at('[') || this.atKw(PTYPES)) head = this.paramHead();
         m.items.push({ ...this.paramOne(head, false), hdr: true });
       } while (this.eat(','));
@@ -593,8 +599,13 @@ class Parser {
         case 'always': case 'initial': this.p++; return [{ k: k.v, line, body: this.stmt() }];
         case 'function': return [this.func()];
         case 'task': return [this.task()];
-        case 'generate': { this.p++; const out = []; while (!this.eat('endgenerate')) { this.eof('endgenerate'); out.push(...this.item()); } return out; }
-        case 'for': case 'if': case 'case': case 'begin': return [this.genItem()];
+        case 'generate': {
+          if (this.inGen || this.inCon) this.err('generate ... endgenerate cannot be nested inside another generate construct (drop the inner keywords)');
+          this.p++; this.inGen = true;
+          const out = []; while (!this.eat('endgenerate')) { this.eof('endgenerate'); out.push(...this.item()); }
+          this.inGen = false; return out;
+        }
+        case 'for': case 'if': case 'case': case 'begin': { this.inCon = (this.inCon || 0) + 1; const g = this.genItem(); this.inCon--; return [g]; }
         case 'defparam': this.err('defparam is not supported; use #(...) parameter overrides');
         case 'specify': while (!this.eat('endspecify')) { this.eof('endspecify'); this.p++; } return [];
       }
@@ -626,6 +637,7 @@ class Parser {
         if (this.eat('default')) this.eat(':'); else { exprs = []; do exprs.push(this.expr()); while (this.eat(',')); this.need(':'); }
         items.push({ exprs, body: this.genBlock() });
       }
+      if (!items.length) throw new VError('a generate case needs at least one item', line);
       return { k: 'gencase', line, expr, items };
     }
     return this.genBlock();
@@ -635,7 +647,7 @@ class Parser {
     if (!this.eat('begin')) return { k: 'genblock', line, name: null, bare, items: this.item() };
     const name = this.eat(':') ? this.id() : null, items = [];
     while (!this.eat('end')) { this.eof('end'); items.push(...this.item()); }
-    if (this.eat(':')) { const n2 = this.id(); if (n2 !== name) this.err(`this block ends with the label '${n2}', but ${name ? `it is named '${name}'` : 'it has no name'}`); }
+    if (this.at(':')) this.err("a label after 'end' is SystemVerilog; in Verilog-2001 only the 'begin : name' is written");
     return { k: 'genblock', line, name, bare: false, items };
   }
   gates() {
@@ -651,18 +663,18 @@ class Parser {
     this.need(';'); return out;
   }
   instances() {
-    this.noSV(this.tok.v);
     const mod = this.id();
     this.noIncr();
-    if (this.at('=') || this.at('<=') || this.at('[')) this.err(`an assignment to '${mod}' must be inside an initial or always block (or use: assign ${mod} = ...;)`);
-    if (this.tok.t !== 'id' && !this.at('#')) this.err(`'${mod}' is not something that can start a module item (a misspelled keyword?)`);
+    if (this.at('=') || this.at('<=') || this.at('[')) { this.noSV(mod); this.err(`an assignment to '${mod}' must be inside an initial or always block (or use: assign ${mod} = ...;)`); }
+    if (this.tok.t === 'kw' && this.t[this.p + 1].v === '(') this.err(`'${this.tok.v}' is a reserved word and cannot be used as an instance name`);
+    if (this.tok.t !== 'id' && !this.at('#')) { this.noSV(mod); this.err(`'${mod}' is not something that can start a module item (a misspelled keyword?)`); }
     let params = null;
     if (this.eat('#')) { this.need('('); params = this.connList(); this.need(')'); }
     const out = [];
     do {
       const line = this.tok.line, name = this.id();
       if (this.at('[')) this.err('arrays of instances are not supported');
-      if (!this.at('(')) this.err(`'${mod}' is not a keyword, so this looks like an instance of a module named '${mod}', which needs a port list: ${mod} ${name} (...);`);
+      if (!this.at('(')) { this.noSV(mod); this.err(`'${mod}' is not a keyword, so this looks like an instance of a module named '${mod}', which needs a port list: ${mod} ${name} (...);`); }
       this.p++; const conns = this.connList(); this.need(')');
       out.push({ k: 'inst', line, mod, params, name, conns });
     } while (this.eat(','));
@@ -733,7 +745,7 @@ class Parser {
           decls.push(...this.item());
         }
         while (!this.eat(end)) { this.eof(end); stmts.push(this.stmt()); }
-        if (this.eat(':')) { const n2 = this.id(); if (n2 !== name) this.err(`this block ends with the label '${n2}', but ${name ? `it is named '${name}'` : 'it has no name'}`); }
+        if (this.at(':')) this.err("a label after 'end' is SystemVerilog; in Verilog-2001 only the 'begin : name' is written");
         return { k: k.v === 'begin' ? 'block' : 'fork', line, name, decls, stmts };
       }
       case 'if': { this.p++; this.need('('); const cond = this.expr(); this.need(')'); const then = this.stmt(); return { k: 'if', line, cond, then, els: this.eat('else') ? this.stmt() : null }; }
@@ -908,6 +920,7 @@ const FINISH = { finish: true }, KILLED = { killed: true }, SYNC = { sync: true 
 class Disable { constructor(target, stop) { this.target = target; this.stop = stop; } }
 const fresh = s => { if (s.dims) { if (s.data) { s.data.fill(initVal(s)); s.ver++; } } else s.val = initVal(s); };
 const snap = s => s.dims ? s.data.slice() : s.val, unsnap = (s, v) => { if (s.dims) s.data = v; else s.val = v; };
+const BLANK = { str: undefined, get: () => V(8, 32n, 0n), real: false, s: false, time: false };      // an empty argument (",,") counts as one space
 const RUNTIME_FN = /^\$(time|stime|realtime|random|urandom|urandom_range|dist_uniform)$/;
 const NOP = { blk: false, run() {} };
 const realNode = f => ({ w: 64, s: true, real: true, mk: () => f });
@@ -916,7 +929,7 @@ const bitNode = f => vecNode(1, false, f);
 const MATH1 = { $ln: Math.log, $log10: Math.log10, $exp: Math.exp, $sqrt: Math.sqrt, $floor: Math.floor, $ceil: Math.ceil, $sin: Math.sin, $cos: Math.cos, $tan: Math.tan,
   $asin: Math.asin, $acos: Math.acos, $atan: Math.atan, $sinh: Math.sinh, $cosh: Math.cosh, $tanh: Math.tanh, $asinh: Math.asinh, $acosh: Math.acosh, $atanh: Math.atanh };
 const MATH2 = { $pow: Math.pow, $atan2: Math.atan2, $hypot: Math.hypot };
-const ARITY = { $time: 0, $stime: 0, $realtime: 0, $signed: 1, $unsigned: 1, $clog2: 1, $bits: 1, $rtoi: 1, $itor: 1, $realtobits: 1, $bitstoreal: 1, $random: 1, $urandom: 1, $urandom_range: 2, $dist_uniform: 3 };
+const ARITY = { $time: 0, $stime: 0, $realtime: 0, $signed: 1, $unsigned: 1, $clog2: 1, $bits: 1, $rtoi: 1, $itor: 1, $realtobits: 1, $bitstoreal: 1, $random: 1, $urandom: 1, $test$plusargs: 1, $value$plusargs: 2, $urandom_range: 2, $dist_uniform: 3 };
 
 function edgeHit(edge, o, n) {
   if (typeof n === 'number') return edge === 'any' && o !== n;
@@ -962,7 +975,7 @@ class Sim {
   }
   limit() {
     if (this.ops > this.maxOps) throw new VError(`step limit reached (${this.maxOps} steps) — is a $finish missing?`, this.line);
-    throw new VError(`the simulation is stuck at time ${this.time}: ${this.maxStep} steps ran without time advancing (a loop with no delay, or a combinational loop that oscillates)`, this.line);
+    throw new VError(`${this.maxStep} steps ran at time ${this.time} without time advancing: a loop with no delay in it, a combinational loop that oscillates, or a loop longer than this limit`, this.line);
   }
 
   // ── elaboration ──
@@ -994,16 +1007,10 @@ class Sim {
     const ts = def.ts || { unit: 0, prec: 0 };
     sc.mod = def; sc.ts = ts; sc.tu = 10 ** (ts.unit - this.prec); sc.tp = 10 ** (ts.prec - this.prec);
     sc.over = over; sc.pidx = 0;
-    if (!def.declared) {
-      def.declared = new Set();
-      const walk = items => { for (const it of items) {
-        if (it.k === 'decl') for (const v of it.vars) def.declared.add(v.name);
-        else if (it.k === 'genfor' || it.k === 'genblock') walk(it.k === 'genfor' ? it.body.items : it.items);
-        else if (it.k === 'genif') { walk(it.then.items); if (it.els) walk(it.els.items); }
-        else if (it.k === 'gencase') for (const c of it.items) walk(c.body.items);
-      } };
-      walk(def.items);
-      if (def.pint) { const seen = new Set(); for (const n of Object.values(def.pint)) { if (seen.has(n)) throw new VError(`'${n}' is exposed as two different ports, which is not supported`, def.line); seen.add(n); } }
+    if (!def.checked) {
+      def.checked = true;
+      const seen = new Set();
+      for (const q of def.ports) { const n = (def.pint && def.pint[q]) || q; if (seen.has(n)) throw new VError(`'${n}' appears twice in the port list of module '${def.name}', which is not supported`, def.line); seen.add(n); }
     }
     const own = [];
     this.elabItems(def.items, sc, own, depth);
@@ -1013,7 +1020,7 @@ class Sim {
     }
     if (over && over.named && over.map.size) throw new VError(`module '${def.name}' has no parameter '${[...over.map.keys()][0]}' that can be overridden`, over.line);
     if (over && !over.named && over.list.length > sc.pidx) throw new VError(`too many parameter overrides for module '${def.name}'`, over.line);
-    this.later.push(...own);          // children were pushed first: their processes start before the parent's
+    for (const f of own) this.later.push(f);       // children were pushed first: their processes start before the parent's
   }
   elabItems(items, sc, own, depth) {
     for (const it of items) if (it.k === 'function' || it.k === 'task') {      // usable before the point of declaration
@@ -1021,7 +1028,10 @@ class Sim {
       this.declName(sc, it.name, ent, it.line);
       own.push(() => { this.line = it.line; if (ent.kind === 'func') this.ensureFunc(ent); else this.ensureTask(ent); });
     }
-    for (const it of items) if (it.k === 'param') { this.line = it.line; this.elabParam(it, sc); }     // parameters first: a range may use one declared further down
+    const fw = sc.fwd || (sc.fwd = new Set());                          // the nets and variables this scope declares, wherever in it they appear
+    for (const it of items) if (it.k === 'decl') for (const v of it.vars) fw.add(v.name);
+    for (const it of items) if (it.k === 'param') { this.line = it.line; this.declParam(it, sc); }     // a parameter may be used above its declaration:
+    for (const it of items) if (it.k === 'param') this.force(sc.names.get(it.name));                    // declare them all, then evaluate each when first needed
     for (const it of items) {
       this.line = it.line;
       switch (it.k) {
@@ -1043,7 +1053,7 @@ class Sim {
           const tmp = v => ({ parent: sc, names: new Map([[it.iv, this.intParam(v)]]), kind: 'gen', path: sc.path, mod: sc.mod, tu: sc.tu, tp: sc.tp });
           let v = this.cint(it.init, sc, 'generate loop start');
           for (let guard = 0; this.ctrue(it.cond, tmp(v)); guard++) {
-            if (guard > 65536) throw new VError('this generate loop does not terminate', it.line);
+            if (guard > 1e6) throw new VError('this generate loop ran more than 1000000 times (is its condition ever false?)', it.line);
             if (sc.names.has(`${gname}[${v}]`)) throw new VError(`this generate loop reaches ${it.iv} = ${v} twice, so it would never end`, it.line);
             const gs = this.mkScope(sc, `${gname}[${v}]`, 'gen', it.line);
             gs.names.set(it.iv, this.intParam(v));
@@ -1076,8 +1086,10 @@ class Sim {
     this.elabItems(b.items, this.mkScope(sc, b.name || this.genName(sc, n), 'gen', b.line), own, depth);
   }
   genName(sc, n) { let nm = 'genblk' + n; while (sc.names.has(nm)) nm = nm.replace('genblk', 'genblk0'); return nm; }   // IEEE 1364-2005 12.4.3
+  konstRun(f) { const q = this.quiet; this.quiet = true; try { return f(); } finally { this.quiet = q; } }   // run f as constant evaluation: no output, fresh function variables
   intParam(v) { return { kind: 'param', w: 32, s: true, real: false, val: vn(32, v), msb: 31, lsb: 0 }; }
-  elabParam(it, sc) {
+  declParam(it, sc) {
+    if (!it.local && sc.kind === 'gen') throw new VError(`'parameter' is not allowed inside a generate block; use localparam`, it.line);
     let src = it.expr, from = sc;
     if (!it.local && sc.kind === 'module' && sc.over) {
       const o = sc.over;
@@ -1085,8 +1097,15 @@ class Sim {
       else if (sc.pidx < o.list.length && o.list[sc.pidx]) { src = o.list[sc.pidx]; from = o.scope; }
       sc.pidx++;
     }
+    this.declName(sc, it.name, { kind: 'param', name: it.name, w: 64, s: true, real: false, val: null, msb: 0, lsb: 0, lazy: { it, sc, src, from, busy: false } }, it.line);
+  }
+  force(p) {                          // evaluate a parameter the first time something needs it
+    const z = p.lazy;
+    if (!z) return p;
+    const { it, sc, src, from } = z;
+    if (z.busy) throw new VError(`parameter '${p.name}' depends on itself`, it.line);
+    z.busy = true;
     const n = this.cExpr(src, { scope: from, konst: true });
-    const p = { kind: 'param', name: it.name, w: 64, s: true, real: false, val: null, msb: 0, lsb: 0 };
     if (it.ptype === 'real' || it.ptype === 'realtime' || (n.real && !it.ptype && !it.range)) { p.real = true; p.val = this.toReal(n)(); }
     else {
       if (it.ptype === 'integer') { p.w = 32; p.s = true; }
@@ -1095,9 +1114,32 @@ class Sim {
       else { p.w = n.w; p.s = it.signed || n.s; }
       if (!it.range) p.msb = p.w - 1;
       p.val = this.cRhs(n, p.w, false)();
-      if (src.k === 'str' && !it.range && !it.ptype) p.str = src.v;
+      const t = this.constStr(src, from);                              // text stays text, so it can serve as a format (with a range or a type, only when it fits exactly)
+      if (t !== undefined && ((!it.range && !it.ptype) || p.w === 8 * t.length)) p.str = t;
     }
-    this.declName(sc, it.name, p, it.line);
+    p.lazy = null;
+    return p;
+  }
+  constStr(a, sc) {                   // the text of a constant string: a literal, a string parameter, or {} / {n{}} / a constant ?: of those (as Icarus sees it)
+    switch (a.k) {
+      case 'str': return a.v;
+      case 'id': { if (a.sels.length) return undefined; const e = this.resolve(a, sc); return e.kind === 'param' ? e.str : undefined; }
+      case 'concat': case 'repl': {
+        let t = '';
+        for (const q of a.parts) { const x = this.constStr(q, sc); if (x === undefined) return undefined; t += x; }
+        return a.k === 'repl' ? t.repeat(Math.max(0, this.cint(a.n, sc, 'replication count'))) : t;
+      }
+      case 'un': return a.op === '+' ? this.constStr(a.e, sc) : undefined;
+      case 'tern': {
+        const x = this.constStr(a.a, sc), y = this.constStr(a.b, sc);
+        if (x === undefined || y === undefined) return undefined;
+        let c;                         // the choice must be a plain constant: one made at run time, or by calling a function, gives a number
+        try { c = this.truthOf(this.cExpr(a.c, { scope: sc, konst: true, nocall: true }))(); } catch (e) { if (e instanceof VError) return undefined; throw e; }
+        const t = c === 1 ? x : c === 0 ? y : undefined;                                                             // (an unknown condition merges the two)
+        return t !== undefined && t.length === Math.max(x.length, y.length) ? t : undefined;                         // (the shorter one is padded, so no longer plain text)
+      }
+    }
+    return undefined;
   }
   declare(it, sc, own) {
     const tf = sc.kind === 'func' || sc.kind === 'task', kind = it.kind;
@@ -1119,6 +1161,9 @@ class Sim {
         // the other half of a non-ANSI port declaration ("output q;" + "reg q;", in either order), or a wire that was used before its declaration
         if (it.dir) sc.pdir.set(v.name, it.dir);
         if (ranged && !ex.scalar && (ex.msb !== msb || ex.lsb !== lsb)) throw new VError(`'${v.name}' is declared twice with different ranges`, line);
+        if (!tf && !ex.implicit && (it.dir ? ex.rng && !it.range : it.range && !ex.rng))
+          throw new VError(`'${v.name}' has a range in its ${it.dir ? 'net or variable' : kind || 'net'} declaration but not in its ${sc.pdir.get(v.name)} declaration (write the same range in both)`, line);
+        if (it.range) ex.rng = true;
         if (ranged) { ex.w = w; ex.msb = msb; ex.lsb = lsb; ex.scalar = false; }
         if (signed) ex.signed = true;
         if (real) ex.real = true;
@@ -1133,10 +1178,11 @@ class Sim {
         this.declInit(ex, v, it, sc, own, line);
         continue;
       }
-      if (ex) throw new VError(`'${v.name}' is already declared`, line);
+      if (ex) throw new VError(`'${v.name}' is already declared`, ex.ast && ex.ast.line > line ? ex.ast.line : line);    // (functions and tasks are entered first)
       const dims = v.dims.map(d => { const a = this.cint(d.msb, sc, 'array bound'), b = this.cint(d.lsb, sc, 'array bound'); return { lo: Math.min(a, b), hi: Math.max(a, b), n: Math.abs(a - b) + 1 }; });
       const sig = this.mkSig(sc, v.name, { w, msb, lsb, signed, real, net: !isVar && !real, dims, isEvent: kind === 'event', scalar: !ranged });
-      this.netKind(sig, kind);
+      this.netKind(sig, kind); sig.rng = !!it.range;
+      if (it.dir && kind) sig.done = true;                              // fully declared in one go: it may not be declared again
       if (it.delay && sig.net) sig.ndelay = { ast: it.delay, sc };       // "wire #3 w;" delays whatever drives w
       if (it.dir) sc.pdir.set(v.name, it.dir);
       this.declInit(sig, v, it, sc, own, line);
@@ -1144,26 +1190,26 @@ class Sim {
   }
   netKind(sig, kind) {
     for (const s of sig.elems || [sig]) {
-      if (kind === 'tri0' || kind === 'tri1') s.pull = { up: kind === 'tri1' ? mask(s.w) : 0n, dn: kind === 'tri0' ? mask(s.w) : 0n };
-      else if (kind === 'wand' || kind === 'triand') s.res = wAnd;
-      else if (kind === 'wor' || kind === 'trior') s.res = wOr;
+      const m = mask(s.w);
+      if (kind === 'tri0' || kind === 'tri1') { s.kind2 = kind; s.pull = { up: kind === 'tri1' ? m : 0n, dn: kind === 'tri0' ? m : 0n }; }
+      else if (kind === 'wand' || kind === 'triand') { s.kind2 = 'wand'; s.wand = m; }
+      else if (kind === 'wor' || kind === 'trior') { s.kind2 = 'wor'; s.wor = m; }
+      else if (kind === 'supply0' || kind === 'supply1') { s.kind2 = kind; s.sup = { up: kind === 'supply1' ? m : 0n, dn: kind === 'supply0' ? m : 0n }; }
     }
   }
   declInit(sig, v, it, sc, own, line) {
-    if (it.kind === 'supply0' || it.kind === 'supply1')
-      own.push(() => { const d = this.addDriver(sig), c = V(sig.w, it.kind === 'supply1' ? mask(sig.w) : 0n, 0n); this.addCA(x => this.driveNet(sig, d, x), () => c, [], null, line, true); });
     if (!v.init) return;
     if (!sig.net && sc.kind !== 'module' && sc.kind !== 'gen') throw new VError(`'${v.name}' cannot be given a value where it is declared; only module-level variables can (assign it in the code instead)`, line);
     const ref = { k: 'id', line, path: [{ n: v.name, ix: [] }], sels: [] };
     if (sig.net) own.push(() => this.cContAssign(sc, ref, v.init, it.delay, line));
     else own.push(() => {              // "reg q = 5;" — the value must be a constant, and it is assigned at time 0
       const lv = this.cLval(ref, { scope: sc }), rhs = this.cRhs(this.cExpr(v.init, { scope: sc, konst: true }), lv.w, lv.real);
-      this.procs.push(() => lv.store(rhs()));
+      this.procs.push(() => lv.store(this.konstRun(rhs)));
     });
   }
   mkSig(sc, name, o, elem) {
     const s = { kind: 'sig', name, sc, path: sc.path ? sc.path + '.' + name : name, w: o.w, msb: o.msb, lsb: o.lsb, signed: !!o.signed, real: !!o.real, net: !!o.net,
-      isEvent: !!o.isEvent, scalar: !!o.scalar, implicit: false, val: null, pers: [], once: [], cap: 16, drivers: null, fwd: null, pull: null, res: null,
+      isEvent: !!o.isEvent, scalar: !!o.scalar, implicit: false, val: null, pers: [], once: [], cap: 16, drivers: null, dm: 0n, ov: 0n, raw: null, fwd: null, direct: false, rng: false, pull: null, sup: null, wand: 0n, wor: 0n, kind2: null,
       dims: null, data: null, elems: null, ver: 0, hist: null, done: false };
     s.val = initVal(s);
     if (o.dims && o.dims.length) {
@@ -1184,7 +1230,7 @@ class Sim {
     switch (e.k) {
       case 'id': {
         const name = e.path[0].n;
-        if (e.path.length > 1 || e.path[0].ix.length || this.visible(name, sc) || sc.mod.declared.has(name)) break;
+        if (e.path.length > 1 || e.path[0].ix.length || e.sels.length || this.visible(name, sc) || (sc.fwd && sc.fwd.has(name))) break;
         if (sc.mod.nettype === 'none') throw new VError(`'${name}' is not declared (implicit wires are switched off by \`default_nettype none)`, e.line);
         const s = this.mkSig(sc, name, { w: 1, msb: 0, lsb: 0, net: true, scalar: true });
         s.implicit = true; this.netKind(s, sc.mod.nettype);
@@ -1222,7 +1268,7 @@ class Sim {
   }
   elabInst(sc, it, own, depth) {
     const def = this.mods.get(it.mod);
-    if (!def) throw new VError(`there is no module named '${it.mod}'`, it.line);
+    if (!def) throw new VError(`there is no module named '${it.mod}'` + (SV.has(it.mod) ? ` ('${it.mod}' is a SystemVerilog keyword; SystemVerilog is not supported)` : ''), it.line);
     const child = this.mkScope(sc, it.name, 'module', it.line);
     let over = null;
     if (it.params) over = { named: it.params.named, scope: sc, line: it.line, list: it.params.list.map(c => c.expr), map: new Map(it.params.list.map(c => [c.name, c.expr])) };
@@ -1239,21 +1285,20 @@ class Sim {
     }
     for (const e of conn.values()) this.implicit(e, sc);
     this.elabModule(def, child, over, depth + 1);
-    const inner = p => (def.pint && def.pint[p]) || p;
-    for (const p of def.ports) {
-      const e = conn.get(p);
-      if (e && child.pdir.get(inner(p)) === 'inout') this.binds.push(() => this.bindInout(sc, child.names.get(inner(p)), p, e, it.line));
+    const inner = p => (def.pint && def.pint[p]) || p, co = this.coerced(def);
+    for (const p of def.ports) {     // joined to the outer net both ways: inout ports, inputs that are also driven from inside, and (as far as
+      const e = conn.get(p), n = inner(p), dir = child.pdir.get(n);       // bindInout allows) outputs; the rest are one-way assignments, set up below
+      if (e && (dir === 'inout' || dir === 'output' || co.has(n))) this.binds.push(() => this.bindInout(sc, child.names.get(n), p, e, it.line, dir));
     }
     own.push(() => {
       for (const p of def.ports) {
         const e = conn.get(p), dir = child.pdir.get(inner(p)), ps = child.names.get(inner(p));
         if (!e && dir === 'input' && def.ud && ps.net) this.addPull(ps, 0, def.ud === 'pull1' ? mask(ps.w) : 0n, def.ud === 'pull0' ? mask(ps.w) : 0n);
-        if (!e || dir === 'inout') continue;
+        if (!e || ps.fwd || dir === 'inout') continue;
         this.line = it.line;
         if (dir === 'input') {
           const cx = { scope: sc, deps: new Set() }, n = this.cExpr(e, cx), d = this.addDriver(ps);
           this.addCA(v => this.driveNet(ps, d, v), this.cRhs(n, ps.w, false), cx.deps, null, it.line, e.k === 'id' && !e.sels.length);
-          if (ps.inDriven && e.k === 'id') this.driveBack(sc, ps, d, e, it.line);
         } else {
           const lv = this.cNetLval(e, { scope: sc });
           this.addCA(lv.drive, this.cRhs(this.sigNode(ps, [], { scope: child }, it.line), lv.w, false), [ps], null, it.line, true);
@@ -1261,34 +1306,79 @@ class Sim {
       }
     });
   }
-  bindInout(sc, ps, p, e, line) {     // an inout port is a two-way window onto the outer net(s): its drivers act there, its value mirrors them
-    const bad = () => new VError(`inout port '${p}' must be connected to wires, or to constant bit/part-selects of them`, line);
-    if (!ps.net) throw bad();
-    if (ps.fwd) throw new VError(`inout port '${p}' is connected twice`, line);
-    const parts = e.k === 'concat' ? e.parts : [e], segs = [];
-    let off = 0;
-    for (let i = parts.length - 1; i >= 0; i--) {                    // from the least significant end
-      if (parts[i].k !== 'id') throw bad();
-      let r;
-      try { r = this.netRef(parts[i], { scope: sc }); } catch (x) { if (x instanceof VError && x.raw.includes('not declared')) throw x; throw bad(); }
-      segs.push({ net: r.sig, lo: r.lo, w: r.w, off }); off += r.w;
-    }
-    if (segs.length > 1 && off !== ps.w) throw new VError(`inout port '${p}' is ${ps.w} bit(s) wide but is connected to ${off} bit(s)`, line);
-    if (segs.length === 1) segs[0].w = Math.min(segs[0].w, ps.w);    // different widths: the low bits are connected
-    const wired = n => { if (n.fwd) for (const f of n.fwd) wired(f.net); else if (!n.res) n.res = ps.res; };
-    if (ps.res) for (const f of segs) wired(f.net);                  // a wand / wor port makes the whole connection wired
-    ps.fwd = segs;
-    if (ps.pull) this.addPull(ps, 0, ps.pull.up, ps.pull.dn);        // and a tri0 / tri1 port biases the bits it is connected to
-    const sim = this, mirror = { fire() { let v = vz(ps.w); for (const f of segs) v = insert(v, f.off, f.w, extract(f.net.val, f.lo, f.w)); sim.set(ps, v); } };
-    for (const f of segs) f.net.pers.push(mirror);
+  dirsOf(def) {                       // port directions and declared kinds, read straight from the module's declarations
+    if (def.dirs) return def.dirs;
+    def.dirs = new Map(); def.pkinds = new Map();
+    for (const it of def.items) if (it.k === 'decl') for (const v of it.vars) { if (it.dir) def.dirs.set(v.name, it.dir); if (it.kind) def.pkinds.set(v.name, it.kind); }
+    return def.dirs;
   }
-  driveBack(sc, ps, d, e, line) {     // an input that is also driven inside its module acts like an inout: what is driven inside shows outside too
-    const t = this.resolve({ ...e, sels: [] }, sc);
-    if (t.kind !== 'sig' || !t.net) return;
-    const out = this.cNetLval(e, { scope: sc });
-    const inside = () => { let r = null; for (const x of ps.drivers) if (x !== d) r = r ? resolve2(r, x.val) : x.val; return r || vz(ps.w); };
-    const ca = this.addCA(out.drive, () => resize(inside(), out.w, false), [], null, line, true);
-    ca.port = d; ps.back = ca;
+  coerced(def) {                      // the input ports a module also drives from inside, or gives a net kind: they act as inout (IEEE 1364-2005 12.3.8)
+    if (def.co) return def.co;
+    const co = def.co = new Set(), dirs = this.dirsOf(def);
+    for (const [n, d] of dirs) if (d === 'input' && ['wand', 'wor', 'triand', 'trior', 'tri0', 'tri1', 'supply0', 'supply1'].includes(def.pkinds.get(n))) co.add(n);
+    const mark = e => {
+      if (!e) return;
+      if (e.k === 'concat') e.parts.forEach(mark);
+      else if (e.k === 'id' && e.path.length === 1 && dirs.get(e.path[0].n) === 'input') co.add(e.path[0].n);
+    };
+    const walk = items => {
+      for (const it of items) switch (it.k) {
+        case 'assign': mark(it.lhs); break;
+        case 'gate': { const n = it.type === 'pullup' || it.type === 'pulldown' ? it.terms.length : it.type === 'buf' || it.type === 'not' ? it.terms.length - 1 : 1; it.terms.slice(0, n).forEach(mark); break; }
+        case 'inst': {
+          const sub = this.mods.get(it.mod);
+          if (!sub) break;
+          const sd = this.dirsOf(sub), sco = this.coerced(sub);
+          it.conns.list.forEach((c, i) => {
+            const pn = it.conns.named ? c.name : sub.ports[i], n = pn && ((sub.pint && sub.pint[pn]) || pn), d = sd.get(n);
+            if (d === 'output' || d === 'inout' || sco.has(n)) mark(c.expr);
+          });
+          break;
+        }
+        case 'genfor': walk(it.body.items); break;
+        case 'genif': walk(it.then.items); if (it.els) walk(it.els.items); break;
+        case 'gencase': for (const c of it.items) walk(c.body.items); break;
+        case 'genblock': walk(it.items); break;
+      }
+    };
+    walk(def.items);
+    return co;
+  }
+  bindInout(sc, ps, p, e, line, dir) {    // a two-way port connection: the port's drivers act on the outer net(s) and its value mirrors them
+    const soft = dir !== 'inout';
+    const bad = () => new VError(`inout port '${p}' must be connected to wires, or to constant bit/part-selects of them`, line);
+    if (!ps.net) { if (soft) return; throw bad(); }
+    if (ps.fwd) throw new VError(`port '${p}' is connected twice`, line);
+    const leaves = [], flat = x => { if (x.k === 'concat') for (const q of x.parts) flat(q); else leaves.push(x); };
+    flat(e);
+    const segs = [];
+    let off = 0;
+    for (let i = leaves.length - 1; i >= 0 && off < ps.w; i--) {     // from the least significant end; outer bits beyond the port are left alone
+      let r = null;
+      if (leaves[i].k === 'id') try { r = this.netRef(leaves[i], { scope: sc }); } catch (x) { if (!(x instanceof VError) || (!soft && x.raw.includes('not declared'))) throw x; }
+      if (!r) { if (soft) return; throw bad(); }                     // (an input tied to something that is not a net stays one-way)
+      const w = Math.min(r.w, ps.w - off);
+      segs.push({ net: r.sig, lo: r.lo, w, off }); off += w;
+    }
+    // Icarus merges a port with what it is connected to only for a whole net of the port's own width. An output connected to anything
+    // else (a select, a concatenation, another width) stays a one-way assignment of its resolved value; inout and input ports still
+    // pass drivers and pulls through a select, but never their wired-AND / wired-OR kind.
+    const direct = e.k === 'id' && segs.length === 1 && segs[0].lo === 0 && segs[0].w === ps.w && ps.w === segs[0].net.w;
+    if (dir === 'output' && !direct) return;
+    for (const f of segs) {
+      const m = mask(f.w), o = BigInt(f.off);
+      if (ps.pull && !f.net.kind2) this.addPull(f.net, f.lo, (ps.pull.up >> o) & m, (ps.pull.dn >> o) & m);    // a plain outer net takes on the port's pulls
+      if (ps.sup) this.addPull(f.net, f.lo, (ps.sup.up >> o) & m, (ps.sup.dn >> o) & m, 'sup');
+    }
+    ps.fwd = segs; ps.direct = direct;
+    this.addWired(ps, 0n, 0n);                                       // ...and, when merged, its wired kind
+    const sim = this, mirror = { fire() { sim.settle(ps); } };
+    for (const n of new Set(segs.map(q => q.net))) n.pers.push(mirror);
+  }
+  addWired(net, wand, wor) {          // make bits of a net wired-AND / wired-OR; a port passes that on to the plain net it is merged with
+    net.wand |= wand; net.wor |= wor;
+    const f = net.direct && net.fwd[0];
+    if (f && !f.net.kind2 && (net.wand || net.wor)) this.addWired(f.net, net.wand, net.wor);
   }
 
   // ── constant evaluation and names ──
@@ -1321,14 +1411,22 @@ class Sim {
     const k0 = key(path[0]);
     let ent = this.lookup(k0, sc);
     if (!ent && path.length > 1) for (let s = sc; s && !ent; s = s.parent) if (s.kind === 'module' && s.mod.name === k0) ent = { kind: 'scope', scope: s };
-    if (!ent) throw new VError(`'${k0}' is not declared`, ast.line);
+    if (!ent) {
+      for (let s = sc; s; s = s.parent) {
+        if (s.fwd && s.fwd.has(k0)) throw new VError(`'${k0}' cannot be used here: this is worked out before the simulation starts, where only numbers, parameters and a constant function's own variables exist`, ast.line);
+        if (s.kind === 'module') break;
+      }
+      throw new VError(`'${k0}' is not declared`, ast.line);
+    }
     for (let i = 1; i < path.length; i++) {
       const sub = this.scopeOf(ent);
       if (!sub) throw new VError(`'${path[i - 1].n}' is not a module instance, named block, task or function`, ast.line);
       const k = key(path[i]), e2 = sub.names.get(k);
       if (!e2) throw new VError(`'${k}' was not found in '${sub.path}'`, ast.line);
+      if (ent.kind === 'task' && ent.ast.auto && e2.kind !== 'scope') throw new VError(`'${k}' belongs to the automatic task '${ent.name}', so it cannot be reached from outside it`, ast.line);
       ent = e2;
     }
+    if (ent.lazy) this.force(ent);
     return ent;
   }
   findKind(ref, sc, kinds) {         // like resolve, except that inside a function its own name still means the function when it is called
@@ -1431,7 +1529,7 @@ class Sim {
     const e = this.cExpr(ast.e, cx), op = ast.op;
     if (e.real) {
       const t = e.mk();
-      if (op === '-') return realNode(() => -t());
+      if (op === '-') return realNode(cx.konst ? () => -t() : () => 0 - t());           // (at run time 0 - x, as Icarus does: negating 0.0 gives 0.0)
       if (op === '+') return e;
       if (op === '!') return bitNode(() => t() === 0 ? V1 : V0);
       throw new VError(`operator '${op}' cannot be applied to a real value`, ast.line);
@@ -1500,6 +1598,7 @@ class Sim {
   cRef(ast, cx) {
     const ent = this.resolve(ast, cx.scope), line = ast.line, name = ast.path[ast.path.length - 1].n;
     if (cx.konst && ast.path.length > 1) throw new VError(`a hierarchical name ('${ast.path.map(q => q.n).join('.')}') cannot be used in a constant expression`, line);
+    if (cx.fn && !cx.fn.outside && ast.path.length > 1) cx.fn.outside = ast.path.map(q => q.n).join('.');
     if (ent.kind === 'sig') return this.sigNode(ent, ast.sels, cx, line);
     if (ent.kind === 'param') {
       if (ent.real) { if (ast.sels.length) throw new VError('bits of a real parameter cannot be selected', line); const r = ent.val; return realNode(() => r); }
@@ -1569,25 +1668,29 @@ class Sim {
     if (ent.kind !== 'func') throw new VError(`'${ent.name || ast.target.path[0].n}' is not a function`, line);
     const f = this.ensureFunc(ent), reg = ent.reg;
     if (ast.args.length !== f.ports.length) throw new VError(`function '${ent.name}' takes ${f.ports.length} argument(s) but was given ${ast.args.length}`, line);
-    if (f.outside) {
-      if (cx.konst) throw new VError(`function '${ent.name}' uses '${f.outside}', which is not one of its own variables, so it cannot be called in a constant expression`, line);
-      if (cx.fn && !cx.fn.outside) cx.fn.outside = f.outside;
+    if (cx.fn) { cx.fn.calls.add(f); if (!cx.fn.outside && this.modOf(ent.scope) !== this.modOf(cx.fn.scope)) cx.fn.outside = ent.name; }
+    if (cx.nocall) throw new VError('a function call is not evaluated here', line);
+    if (cx.konst) {
+      const why = this.nonConst(f, new Set());
+      if (why) throw new VError(`function '${ent.name}' depends on '${why}', which is neither a constant nor one of its own variables, so it cannot be called in a constant expression`, line);
     }
     const ins = f.ports.map((p, i) => this.cRhs(this.cExpr(ast.args[i], cx), p.w, p.real)), n = ins.length, ret = f.ret, auto = f.auto;
     const call = () => {
       const vals = new Array(n), locals = f.locals;
       for (let i = 0; i < n; i++) vals[i] = ins[i]();
-      let saved = null;
+      let saved = null, keep = null;
       if (auto || sim.quiet) {         // automatic (and every constant-function call): fresh variables, and a recursive call leaves its caller's alone
         if (f.depth > 0) saved = locals.map(snap);
         for (const s of locals) fresh(s);
       }
+      else { if (f.depth > 0) keep = [ret.val]; fresh(ret); }           // a static function keeps its other variables; its result starts unknown, and a nested call leaves its caller's alone
       if (++f.depth > 3000) throw new VError(`function '${ent.name}' calls itself too deeply`, line);
       for (let i = 0; i < n; i++) sim.store(f.ports[i], vals[i]);
       const lvl = ++reg.sync;
       try { f.body.run(); } catch (e) { if (!(e instanceof Disable) || e.target !== reg || e.stop !== SYNC || lvl !== 1) throw e; } finally { f.depth--; reg.sync--; }
       const r = ret.val;
       if (saved) for (let i = 0; i < locals.length; i++) unsnap(locals[i], saved[i]);
+      if (keep) ret.val = keep[0];
       return r;
     };
     return ret.real ? realNode(call) : vecNode(ret.w, ret.signed, call);
@@ -1595,7 +1698,7 @@ class Sim {
   ensureFunc(ent) {
     if (ent.c) return ent.c;
     const ast = ent.ast, s = this.mkScope(ent.scope, ast.name, 'func', ast.line, true);
-    const c = ent.c = { scope: s, ret: null, ports: [], locals: [], body: null, depth: 0, auto: ast.auto, outside: null };
+    const c = ent.c = { scope: s, ret: null, ports: [], locals: [], body: null, depth: 0, auto: ast.auto, outside: null, calls: new Set() };
     s.auto = ast.auto;
     let o = { w: 1, msb: 0, lsb: 0, signed: ast.signed, scalar: true };
     if (ast.rtype === 'integer') o = { w: 32, msb: 31, lsb: 0, signed: true };
@@ -1610,8 +1713,19 @@ class Sim {
     this.preBlocks(ast.body, s);
     c.locals = this.storage(s);
     c.body = this.cStmt(ast.body, { scope: s, func: ast.name, fn: c });
-    if (c.body.blk) throw new VError(`function '${ast.name}' may not contain delays, event controls or calls to tasks that wait`, ast.line);
+    if (c.body.blk) {
+      const first = q => { if (!q || typeof q !== 'object') return 0; if (q.k && (['delay', 'evwait', 'wait', 'fork'].includes(q.k) || (q.k === 'assign' && (q.delay || q.ev)))) return q.line; for (const k in q) { const l = first(q[k]); if (l) return l; } return 0; };
+      throw new VError(`function '${ast.name}' runs in zero time, so it may not contain delays, event controls, fork or calls to tasks that wait`, first(ast.body) || ast.line);
+    }
     return c;
+  }
+  modOf(sc) { while (sc && sc.kind !== 'module') sc = sc.parent; return sc; }
+  nonConst(f, seen) {                 // what stops f (or anything it calls) from being a constant function, if anything
+    if (f.outside) return f.outside;
+    if (seen.has(f)) return null;
+    seen.add(f);
+    for (const g of f.calls) { const r = this.nonConst(g, seen); if (r) return r; }
+    return null;
   }
   storage(scope, out = []) {          // every variable of one activation of a task or function, the ones in its named blocks included
     for (const e of scope.names.values()) {
@@ -1642,7 +1756,9 @@ class Sim {
   }
   cSysFn(ast, cx) {
     const name = ast.name, args = ast.args, line = ast.line, sc = cx.scope, sim = this;
+    if (args.some(a => !a)) throw new VError(`${name} has an empty argument`, line);
     if (cx.konst && RUNTIME_FN.test(name)) throw new VError(`${name} cannot be used in a constant expression`, line);
+    if (cx.fn && !cx.fn.outside && RUNTIME_FN.test(name)) cx.fn.outside = name;
     if (name in ARITY && args.length > ARITY[name]) throw new VError(`${name} takes ${ARITY[name] || 'no'} argument${ARITY[name] === 1 ? '' : 's'}, but ${args.length} were given`, line);
     if ((MATH1[name] && args.length !== 1) || (MATH2[name] && args.length !== 2)) throw new VError(`${name} takes ${MATH1[name] ? 'one argument' : 'two arguments'}`, line);
     const arg = i => { if (!args[i]) throw new VError(`${name} needs ${i + 1} argument(s)`, line); return this.cExpr(args[i], cx); };
@@ -1650,7 +1766,7 @@ class Sim {
     const i32 = a => { const t = this.cRhs(this.cExpr(a, cx), 32, false); return () => { const v = t(); return v.b ? 0 : Number(sbig(v)); }; };   // as a signed 32-bit integer
     const seeded = f => {              // run f with the caller's seed variable, then store the updated seed back
       const seed = i32(args[0]), lv = this.cLval(args[0], cx);
-      if (lv.real) throw new VError(`the seed of ${name} must be an integer or reg variable`, line);
+      if (lv.real || !lv.whole || lv.w < 32) throw new VError(`the seed of ${name} must be an integer, a time or a reg of at least 32 bits (the whole variable)`, line);
       return () => { const keep = sim.seed; sim.seed = seed(); const r = f(); lv.store(resize(vn(32, sim.seed), lv.w, true)); sim.seed = keep; return vn(32, r); };
     };
     switch (name) {
@@ -1672,12 +1788,21 @@ class Sim {
         const e = arg(0), t = this.cRhs(e, Math.max(32, e.w), false);
         return int32(() => { const v = t(); if (v.b) return vx(32); let n = v.a, r = 0; if (n > 1n) { n -= 1n; while (n > 0n) { n >>= 1n; r++; } } return vn(32, r); });
       }
-      case '$bits': { const e = arg(0), v = vn(32, e.real ? 1 : e.w); return int32(() => v); }
+      case '$bits': {
+        if (!args[0]) arg(0);
+        const a0 = args[0], mem = a0.k === 'id' && !a0.sels.length ? this.resolve(a0, sc) : null;
+        if (mem && mem.kind === 'sig' && mem.dims) { const v = vn(32, mem.w); return int32(() => v); }      // a whole memory: the width of one word, as in Icarus
+        const e = this.cExpr(args[0], { ...cx, konst: false, deps: null, fn: null }), v = vn(32, e.real ? 1 : e.w); return int32(() => v);   // only the width is used, so a variable is fine in a constant expression
+      }
       case '$rtoi': { const t = this.toReal(arg(0)); return int32(() => { const r = t(); return Number.isFinite(r) ? vn(32, BigInt(Math.trunc(r))) : vx(32); }); }
       case '$itor': return realNode(this.toReal(arg(0)));
       case '$realtobits': { const t = this.toReal(arg(0)), buf = new DataView(new ArrayBuffer(8)); return vecNode(64, false, () => { buf.setFloat64(0, t()); return V(64, buf.getBigUint64(0), 0n); }); }
       case '$bitstoreal': { const t = this.cRhs(arg(0), 64, false), buf = new DataView(new ArrayBuffer(8)); return realNode(() => { buf.setBigUint64(0, t().a); return buf.getFloat64(0); }); }
-      case '$test$plusargs': case '$value$plusargs': { const z = vn(32, 0); return int32(() => z); }
+      case '$test$plusargs': case '$value$plusargs': {                  // there is no command line here: the text is evaluated and nothing ever matches
+        const e = arg(0), g = e.real ? e.mk() : e.mk(e.w, e.s), z = vn(32, 0);
+        if (name === '$value$plusargs') { if (args.length < 2) arg(1); this.cLval(args[1], cx); }
+        return int32(() => { g(); return z; });
+      }
     }
     if (MATH1[name]) { const f = MATH1[name], t = this.toReal(arg(0)); return realNode(() => f(t())); }
     if (MATH2[name]) { const f = MATH2[name], a = this.toReal(arg(0)), b = this.toReal(arg(1)); return realNode(() => f(a(), b())); }
@@ -1729,35 +1854,50 @@ class Sim {
     if (sig.once.length >= sig.cap) { sig.once = sig.once.filter(x => !x.dead); sig.cap = Math.max(16, sig.once.length * 2); }
     sig.once.push(w);
   }
-  addDriver(sig) {
-    if (sig.fwd) return { up: sig.fwd.map(f => this.addDriver(f.net)) };
-    const d = { val: vz(sig.w), fresh: true };
-    (sig.drivers || (sig.drivers = [])).push(d);
+  addDriver(sig, m = mask(sig.w)) {   // m: the bits this driver can drive
+    const d = { val: vz(sig.w), fresh: true, up: null, m };
+    (sig.drivers || (sig.drivers = [])).push(d); sig.ov |= sig.dm & m; sig.dm |= m;
+    if (sig.fwd) d.up = sig.fwd.map(f => this.addDriver(f.net, ((m >> BigInt(f.off)) & mask(f.w)) << BigInt(f.lo)));     // a port's driver also acts on the outer net(s)
     return d;
   }
   driveNet(sig, d, v) {
-    if (sig.fwd) {
-      const fw = sig.fwd;
-      for (let i = 0; i < fw.length; i++) { const f = fw[i]; this.driveNet(f.net, d.up[i], insert(vz(f.net.w), f.lo, f.w, extract(v, f.off, f.w))); }
-      return;
-    }
     if (!d.fresh && d.val.a === v.a && d.val.b === v.b) return;
-    d.val = v; d.fresh = false;
-    const ds = sig.drivers;
-    let r = v;
-    if (ds.length > 1) { const f = sig.res || resolve2; r = ds[0].val; for (let i = 1; i < ds.length; i++) r = f(r, ds[i].val); }
-    if (sig.pull) r = sig.res ? sig.res(r, pullVec(sig.w, sig.pull)) : pulled(r, sig.pull);
-    this.set(sig, r);
-    if (sig.back && d !== sig.back.port) sig.back.fire();
+    if (!sig.fwd) { d.val = v; d.fresh = false; this.settle(sig, d); return; }
+    const touched = [];
+    this.stage(sig, d, v, touched);
+    for (let i = touched.length - 1; i >= 0; i--) this.settle(touched[i]);      // outer nets first, each once, then the ports that mirror them
   }
-  addPull(sig, lo, up, dn) {          // up / dn: masks (relative to bit lo of sig) of the bits pulled to 1 / to 0
-    const sh = BigInt(lo);
-    if (sig.fwd) {
-      for (const f of sig.fwd) { const m = mask(f.w), o = BigInt(f.off); this.addPull(f.net, f.lo, ((up << sh) >> o) & m, ((dn << sh) >> o) & m); }
-      return;
+  stage(sig, d, v, touched) {         // record a driver's new value on a port and on everything it is connected to, without resolving yet
+    d.val = v; d.fresh = false;
+    if (!touched.includes(sig)) touched.push(sig);
+    if (sig.fwd) for (let i = 0; i < sig.fwd.length; i++) { const f = sig.fwd[i]; this.stage(f.net, d.up[i], insert(vz(f.net.w), f.lo, f.w, extract(v, f.off, f.w)), touched); }
+  }
+  settle(sig, d) {                    // a net's value: its drivers resolved bit by bit as wire / wand / wor, then pulls, then (for a port) the outer nets
+    const ds = sig.drivers, w = sig.w, wired = sig.wand | sig.wor;
+    let r;
+    if (!ds || !ds.length) r = vz(w);
+    else if (d && sig.raw && !(sig.ov & d.m)) r = sig.raw = mix(sig.raw, d.val, d.m);     // d: the one driver that changed, alone on its bits
+    else {
+      r = ds[0].val;
+      for (let i = 1; i < ds.length; i++) r = resolve2(r, ds[i].val);
+      if (wired) {
+        let ra = ds[0].val, ro = ra;
+        for (let i = 1; i < ds.length; i++) { ra = wAnd(ra, ds[i].val); ro = wOr(ro, ds[i].val); }
+        r = mix(mix(r, ro, sig.wor), ra, sig.wand);                   // (both kinds on one bit, through two ports: wired-AND, as in Icarus)
+      }
+      sig.raw = r;
     }
-    const m = mask(sig.w), p = sig.pull || (sig.pull = { up: 0n, dn: 0n });
+    const p = sig.pull, u = sig.sup;
+    const extra = q => { const none = mask(w) & ~(q.up | q.dn); r = mix(mix(r, wOr(r, V(w, q.up, none)), sig.wor), wAnd(r, V(w, q.up & ~q.dn, none)), sig.wand); };
+    if (p) { if (wired) extra(p); r = pulled(r, p.up & ~wired, p.dn & ~wired); }                     // on a wired bit a pull or a supply is one more driver
+    if (u) { if (wired) extra(u); const up = u.up & ~wired, dn = u.dn & ~wired, m = up | dn; r = V(w, (r.a & ~m) | up, (r.b & ~m) | (up & dn)); }   // elsewhere a supply beats every driver
+    if (sig.fwd) for (const f of sig.fwd) r = insert(r, f.off, f.w, extract(f.net.val, f.lo, f.w));
+    this.set(sig, r);
+  }
+  addPull(sig, lo, up, dn, key = 'pull') {     // up / dn: masks (relative to bit lo of sig) of the bits pulled to 1 / to 0; key 'sup' for a supply
+    const m = mask(sig.w), sh = BigInt(lo), p = sig[key] || (sig[key] = { up: 0n, dn: 0n });
     p.up |= (up << sh) & m; p.dn |= (dn << sh) & m;
+    if (sig.fwd) for (const f of sig.fwd) { const fm = mask(f.w), o = BigInt(f.off); this.addPull(f.net, f.lo, ((up << sh) >> o) & fm, ((dn << sh) >> o) & fm, key); }
   }
   cLval(ast, cx) {                    // procedural target: {w, real, store(v), prep() → store with indexes captured now}
     const sim = this, line = ast.line;
@@ -1783,7 +1923,7 @@ class Sim {
       const sel = this.cSel(sig, sels[nd], cx, line), put = (i, p, v) => { if (i >= 0 && p !== null) sim.setElem(sig, i, insert(sig.data[i], p, sel.w, v)); };
       return { w: sel.w, real: false, store: v => put(idx(), sel.lo(), v), prep: () => { const i = idx(), p = sel.lo(); return v => put(i, p, v); } };
     }
-    if (!sels.length) { const st = sig.real ? v => sim.setReal(sig, v) : v => sim.set(sig, v); return { w: sig.w, real: sig.real, store: st, prep: () => st, sig }; }
+    if (!sels.length) { const st = sig.real ? v => sim.setReal(sig, v) : v => sim.set(sig, v); return { w: sig.w, real: sig.real, store: st, prep: () => st, sig, whole: true }; }
     if (sig.real || sels.length > 1) throw new VError(`'${name}' has too many indexes`, line);
     const sel = this.cSel(sig, sels[0], cx, line), put = (p, v) => { if (p !== null) sim.set(sig, insert(sig.val, p, sel.w, v)); };
     return { w: sel.w, real: false, store: v => put(sel.lo(), v), prep: () => { const p = sel.lo(); return v => put(p, v); }, sig };
@@ -1816,8 +1956,7 @@ class Sim {
       const ps = ast.parts.map(p => this.cNetLval(p, cx)), w = ps.reduce((a, p) => a + p.w, 0);
       return { w, drive: v => { let hi = w; for (const p of ps) { hi -= p.w; p.drive(extract(v, hi, p.w)); } } };
     }
-    const { sig, lo, w } = this.netRef(ast, cx), d = this.addDriver(sig);
-    if (sig.sc && sig.sc.kind === 'module' && sig.sc.pdir.get(sig.name) === 'input') sig.inDriven = true;
+    const { sig, lo, w } = this.netRef(ast, cx), d = this.addDriver(sig, mask(w) << BigInt(lo));
     if (lo === 0 && w === sig.w) return { w, sig, drive: v => sim.driveNet(sig, d, v) };
     const Z = vz(sig.w);
     return { w, sig, drive: v => sim.driveNet(sig, d, insert(Z, lo, w, v)) };
@@ -1876,6 +2015,7 @@ class Sim {
       return;
     }
     const mos = type.endsWith('mos'), tri = mos || type.includes('if'), multiOut = type === 'buf' || type === 'not';
+    if (!tri && it.delay && it.delay.k === 'delays' && it.delay.list.length > 2) throw new VError(`a '${type}' gate takes at most two delays (rise and fall); only bufif/notif gates and MOS switches have a third, turn-off delay`, line);
     if (it.terms.length < 2 || (tri && it.terms.length !== 3)) throw new VError(`a '${type}' gate has the wrong number of terminals`, line);
     const nOut = multiOut ? it.terms.length - 1 : 1;
     const outs = it.terms.slice(0, nOut).map(t => { const o = this.cNetLval(t, { scope: sc }); if (o.w !== 1) throw new VError(`a gate output must be a single bit, but this one is ${o.w} bits wide`, line); return o; });
@@ -1904,7 +2044,7 @@ class Sim {
     return s;
   }
   at(t, fn) { if (t <= this.time) this.inactive.push(fn); else this.slot(t).a.push(fn); }
-  spawn(genFn, onDone) { return { gen: genFn(), onDone, seq: 0, dead: false, fin: false, run: false }; }
+  spawn(genFn, onDone) { return { gen: genFn(), onDone, seq: 0, dead: false, fin: false, run: false, pend: null }; }
   step(p, f) {                        // run process p until it waits again or ends
     const prev = this.cur;
     let done;
@@ -1918,14 +2058,15 @@ class Sim {
     return () => { if (p.seq === s) this.resume(p); };
   }
   kill(p, reg, stop) {                // another process disabled a block or task that p is waiting inside: unwind p out of it
-    if (p.dead || p.fin || p.run) return;
+    if (p.dead || p.fin) return;
+    if (p.run) { p.pend = { reg, stop }; return; }      // it is busy disabling something itself: it is unwound when control returns to it
     p.seq++;
     this.step(p, () => p.gen.throw(new Disable(reg, stop)));
   }
   disable(reg) {                      // end every running activation of a block, task or named fork, in whichever process it runs
     const me = this.cur, outer = new Map();             // process → its outermost activation: unwinding stops there, once
     for (const a of [...reg.aborts]) { if (a.fork) a.fork(); else if (!outer.has(a.proc)) outer.set(a.proc, a); }
-    for (const [p, a] of outer) if (p !== me) this.kill(p, reg, a);
+    for (const [p, a] of outer) if (p !== me && reg.aborts.has(a)) this.kill(p, reg, a);   // (a killed process may itself have ended the others)
     if (me && me.dead) throw KILLED;                    // this process was a branch of a fork that has just been ended
     if (me && outer.has(me)) throw new Disable(reg, outer.get(me));
     if (reg.sync) throw new Disable(reg, SYNC);         // running in code that never waits: that can only be this very call stack
@@ -1948,12 +2089,12 @@ class Sim {
       // (instances before their parent). Whatever those wake runs after all of them.
       for (const f of this.funcs) for (const s of f.locals) fresh(s);                      // constant-function calls during elaboration leave no trace
       const nets = this.nets.filter(s => s.net);
-      for (const s of nets) { s.val = vx(s.w); if (s.hist) s.hist[0][1] = s.val; }       // every net starts unknown...
+      for (const s of nets) { s.val = s.drivers ? V(s.w, s.dm, mask(s.w)) : vx(s.w); if (s.hist) s.hist[0][1] = s.val; }       // every net starts unknown (bits of a driven net that nothing drives: floating)...
       for (const f of this.pushes) f();
       this.active = this.procs.slice();
       this.boot = [];
       for (const f of this.pre) f();
-      for (const s of nets) if (!s.drivers && !s.fwd) this.set(s, s.pull ? pulled(vz(s.w), s.pull) : vz(s.w));   // ...an undriven one floats (or follows its pull)
+      for (const s of nets) if (!s.drivers) this.settle(s);                              // ...an undriven one floats, follows its pull, or mirrors what it is connected to
       for (const ca of this.cas) this.evalCA(ca);
       for (let i = 0; i < this.boot.length; i++) this.boot[i]();
       this.boot = null;
@@ -2049,6 +2190,11 @@ class Sim {
     const t = n.mk(n.w, n.s);
     return () => { const v = t(); return v.b ? 0 : Number(v.a) * tu; };
   }
+  autoTarget(ast, sc) {               // the name of a variable of an automatic task / function among the targets of an assignment, if any
+    if (ast.k === 'concat') { for (const q of ast.parts) { const r = this.autoTarget(q, sc); if (r) return r; } return null; }
+    const e = this.resolve(ast, sc);
+    return e.kind === 'sig' && e.sc && e.sc.auto ? e.name : null;
+  }
   catchDisable(st, reg) {
     const sim = this;
     if (!st.blk) return { blk: false, run() {
@@ -2075,7 +2221,7 @@ class Sim {
           c = { ...cx, scope };
         }
         const ss = ast.stmts.map(s => this.cStmt(s, c));
-        if (ast.k === 'fork') return { blk: true, run: function* () {
+        if (ast.k === 'fork' && ss.some(s => s.blk)) return { blk: true, run: function* () {
           let n = ss.length;
           if (!n) return;
           const wake = sim.park(), kids = [];
@@ -2166,7 +2312,8 @@ class Sim {
         const ev = ast.ev ? this.cEvent(ast.ev, cx.scope, new Set()) : null, rep = ast.rep ? this.cIntX(ast.rep, cx) : null;
         if (ast.nb) {
           if (cx.func) throw new VError(`function '${cx.func}' cannot contain a nonblocking assignment (<=); use = instead`, line);
-          if (lv.sig && lv.sig.sc.auto) throw new VError(`'${lv.sig.name}' belongs to an automatic task or function, so it cannot be assigned with <=; use =`, line);
+          const au = this.autoTarget(ast.lhs, cx.scope);
+          if (au) throw new VError(`'${au}' belongs to an automatic task or function, so it cannot be assigned with <=; use =`, line);
           if (ev) return { blk: false, run() {          // q <= @(posedge clk) d;  — scheduled without blocking the process
             sim.line = line;
             const v = rhs(), st = lv.prep();
@@ -2189,6 +2336,7 @@ class Sim {
       case 'trigger': {
         const ev = this.resolve(ast.target, cx.scope);
         if (ev.kind !== 'sig' || !ev.isEvent) throw new VError(`'${ast.target.path[0].n}' is not an event`, line);
+        this.noteOutside(ev, cx);
         return { blk: false, run() { sim.set(ev, vn(32, ev.val.a + 1n)); } };
       }
       case 'disable': {
@@ -2196,7 +2344,13 @@ class Sim {
         if (!(ent.kind === 'task' || (ent.kind === 'scope' && ent.scope.kind === 'block')))
           throw new VError(`'${ast.target.path[ast.target.path.length - 1].n}' is ${ent.kind === 'func' ? 'a function' : 'not a named block or a task'}, so it cannot be disabled` + (ent.kind === 'func' ? ' (disable a named block inside it instead)' : ''), line);
         const reg = ent.kind === 'scope' ? ent.scope.reg : ent.reg;
-        return { blk: false, run() { sim.line = line; if (reg.sync || reg.aborts.size) sim.disable(reg); } };   // disabling something that is not running does nothing
+        return { blk: false, run() {
+          sim.line = line;
+          if (!reg.sync && !reg.aborts.size) return;                     // disabling something that is not running does nothing
+          sim.disable(reg);
+          const me = sim.cur;
+          if (me && me.pend) { const d = me.pend; me.pend = null; throw new Disable(d.reg, d.stop); }
+        } };
       }
       case 'taskcall': return this.cTaskCall(ast, cx);
       case 'syscall': {               // system tasks do nothing while a constant function is being evaluated
@@ -2223,7 +2377,7 @@ class Sim {
       sim.line = line;
       const vals = ins.map(x => x.rhs());
       let k = T;
-      if (t.auto) { k = t.pool.pop() || sim.makeTaskInst(ent); for (const s of k.locals) fresh(s); }
+      if (t.auto) { k = t.pool.pop() || sim.konstRun(() => sim.makeTaskInst(ent)); for (const s of k.locals) fresh(s); }
       for (let n = 0; n < ins.length; n++) sim.store(k.ports[ins[n].i].sig, vals[n]);
       return k;
     };
@@ -2253,9 +2407,8 @@ class Sim {
     const sim = this, sc = cx.scope;
     const items = args.map((a, i) => {
       if (!a) return null;
-      const n = this.cExpr(a, cx);
-      if (a.k === 'id' && !a.sels.length) { const e = this.resolve(a, cx.scope); if (e.kind === 'param' && e.str !== undefined) return { str: e.str, get: n.mk(n.w, n.s), real: false, s: false, time: false }; }   // a string parameter is text
-      return { str: a.k === 'str' ? a.v : undefined, dyn: !!single && i === 0 && a.k !== 'str' && !n.real, get: n.real ? n.mk() : n.mk(n.w, n.s), real: n.real, s: n.s,
+      const n = this.cExpr(a, cx), str = this.constStr(a, sc);
+      return { str, dyn: !!single && i === 0 && str === undefined && !n.real, get: n.real ? n.mk() : n.mk(n.w, n.s), real: n.real, s: n.s,
         time: a.k === 'sysfn' && /^\$(time|stime|realtime)$/.test(a.name) };
     });
     const f = () => sim.format(items, base, sc, single);
@@ -2270,7 +2423,7 @@ class Sim {
       if (!it) { out += ' '; continue; }
       let s = it.str;
       if (s === undefined) {
-        if (!it.dyn) { out += it.real ? fmtG(it.get(), 6, true) : fmtVec(base, it.get(), it.s); continue; }
+        if (!it.dyn) { out += !it.real ? fmtVec(base, it.get(), it.s) : it.time ? fmtF(it.get(), Math.max(0, sc.ts.unit - sc.ts.prec)) : fmtG(it.get(), 6, true); continue; }
         s = bytesStr(it.get());       // $sformat: the format may come from a variable
       }
       for (let p = 0; p < s.length; p++) {
@@ -2282,8 +2435,8 @@ class Sim {
         const spec = m[4].toLowerCase(), left = m[1].includes('-'), plus = m[1].includes('+');
         if (spec === '%') out += '%';
         else if (spec === 'm') out += this.fmtArg('m', null, left, m[2], m[3], sc);
-        else if (!'dbohxcstefgvuz'.includes(spec) || i >= items.length) out += `<%${m[4]}>`;      // unknown conversion, or no argument left for it
-        else { const a = items[i++]; out += a ? this.fmtArg(spec, a, left, m[2], m[3], sc, m[4] === 'E' || m[4] === 'G', plus) : ' '; }
+        else if (!'dbohxcstefgvuz'.includes(spec) || i >= items.length) out += `<${m[0]}>`;        // unknown conversion, or no argument left for it
+        else out += this.fmtArg(spec, items[i++] || BLANK, left, m[2], m[3], sc, m[4] === 'E' || m[4] === 'G', plus);
       }
       if (single) break;              // $sformat takes one format string; extra arguments are ignored
     }
@@ -2303,9 +2456,10 @@ class Sim {
         if (!a.real) return fmtVec(base, a.get(), a.s, width, zero, left, plus);
         const r = a.get();
         if (!Number.isFinite(r)) return pad(nonFinite(r));
-        return base === 'd' ? padNum(roundR(r).toString(), width, zero, left) : fmtVec(base, vn(64, roundR(r)), false, width === undefined ? 0 : width, zero, left);
+        if (base === 'd') return padNum((plus && !isNeg(r) ? '+' : '') + roundR(r).toString(), width, zero, left);
+        return padNum(fmtVec(base, vn(64, roundR(r)), false, 0), width, zero, left);
       }
-      case 'c': { if (a.real) return pad(''); const v = a.get(), c = String.fromCharCode(Number(v.a & ~v.b & 255n)); return zpad(c) || pad(c); }
+      case 'c': { const v = a.real ? r2v(a.get(), 8) : a.get(), c = String.fromCharCode(Number(v.a & ~v.b & 255n)); return zpad(c) || pad(c); }
       case 's': {
         if (a.str !== undefined) return pad(a.str);
         if (a.real) return pad(fmtG(a.get(), 6, true));
@@ -2321,7 +2475,7 @@ class Sim {
         if (a.real) ticks = a.get() * sc.tu;
         else { const v = a.get(); if (v.b) return fit('x'); ticks = Number(a.s ? sbig(v) : v.a) * sc.tu; }
         const sh = tf.unit - this.prec;
-        return fit(fmtF(sh >= 0 ? ticks / 10 ** sh : ticks * 10 ** -sh, tf.digits) + tf.suffix);
+        return fit(fmtF(sh >= 0 ? ticks / 10 ** sh : ticks * 10 ** -sh, P === undefined ? tf.digits : prec) + tf.suffix);
       }
       case 'e': case 'f': case 'g': {
         const r = a.real ? a.get() : v2r(a.get(), a.s);
@@ -2329,7 +2483,12 @@ class Sim {
         if (plus && s[0] !== '-') s = '+' + s;
         return padNum(upper ? s.toUpperCase() : s, width, zero, left);
       }
-      case 'v': return pad(a.real ? '' : ['St0', 'St1', 'HiZ', 'StX'][bitState(a.get())]);     // strengths are not modelled: everything driven is strong
+      case 'v': {                      // strengths are not modelled: everything driven is strong
+        if (a.real) return pad('');
+        const v = a.get(), bits = [];
+        for (let i = v.w - 1; i >= 0; i--) bits.push(['St0', 'St1', 'HiZ', 'StX'][Number(((v.a >> BigInt(i)) & 1n) | (((v.b >> BigInt(i)) & 1n) << 1n))]);
+        return pad(bits.join('_'));
+      }
       case 'u': case 'z': throw new VError(`the %${spec} format (raw binary output) is not supported`, this.line);
     }
     return '';
@@ -2359,13 +2518,15 @@ class Sim {
       return { blk: false, run() { sim.line = line; lv.store(strToV(fmt(), lv.w)); } };
     }
     switch (name) {
-      case '$finish': case '$stop': return { blk: false, run() { sim.finished = true; throw FINISH; } };
+      case '$finish': case '$stop':
+        if (args.length > 1 || (args.length === 1 && !args[0])) throw new VError(`${name} takes at most one argument`, line);
+        return { blk: false, run() { sim.finished = true; throw FINISH; } };
       case '$monitoron': return { blk: false, run() { sim.monOn = true; if (sim.monitor) sim.monitor.force(); } };
       case '$monitoroff': return { blk: false, run() { sim.monOn = false; } };
       case '$dumpfile': case '$dumpvars': case '$dumpon': case '$dumpoff': case '$dumpall': case '$dumplimit': case '$dumpflush': case '$fflush':
         return NOP;                    // waveforms are always recorded
       case '$timeformat': {
-        if (args.length && args.length !== 4) throw new VError('$timeformat takes either no arguments or four: (unit, precision, suffix, minimum width)', line);
+        if (args.length && (args.length !== 4 || args.some(a => !a))) throw new VError('$timeformat takes either no arguments or four: (unit, precision, suffix, minimum width)', line);
         const num = a => a ? this.cIntX(a, cx) : null, u = num(args[0]), dg = num(args[1]), mw = num(args[3]);
         let sfx = () => '';
         if (args[2]) { const n = this.cExpr(args[2], cx); if (n.real) throw new VError('the $timeformat suffix must be a string', line); const g = n.mk(n.w, n.s); sfx = args[2].k === 'str' ? () => args[2].v : () => bytesStr(g()); }
@@ -2374,11 +2535,13 @@ class Sim {
       }
       case '$printtimescale': {
         let ms = sc;
+        if (args.length > 1) throw new VError('$printtimescale takes at most one argument', line);
         if (args[0]) { const e = args[0].k === 'id' ? this.resolve(args[0], sc) : null; if (!e || e.kind !== 'scope') throw new VError('$printtimescale takes the name of a module instance', line); ms = e.scope; }
         while (ms.kind !== 'module') ms = ms.parent;
         return { blk: false, run() { sim.emit(`Time scale of (${ms.path}) is ${tsStr(ms.ts.unit)} / ${tsStr(ms.ts.prec)}\n`); } };
       }
-      case '$random': case '$urandom': case '$dist_uniform': { const t = this.cSysFn({ k: 'sysfn', line, name, args }, cx).mk(32, false); return { blk: false, run() { t(); } }; }
+      case '$random': case '$urandom': { const t = this.cSysFn({ k: 'sysfn', line, name, args }, cx).mk(32, false); return { blk: false, run() { t(); } }; }
+      case '$dist_uniform': throw new VError('$dist_uniform is a function: use its result in an expression', line);
       case '$readmemh': case '$readmemb': throw new VError(`${name} is not supported (there is no file system here); fill the memory in an initial block instead`, line);
     }
     throw new VError(`${name} is not a supported system task`, line);
