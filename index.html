@@ -12,6 +12,8 @@
   --bg: #f3f5f8; --panel: #ffffff; --ink: #18202c; --muted: #566273; --line: #d5dbe4; --accent: #0b62bd; --accent-ink: #ffffff;
   --err: #b3261e; --err-bg: #fdeceb; --code-bg: #fbfcfe; --gutter: #7f8a99; --mark: #ffe9e7;
   --w-bit: #0a7a3c; --w-bus: #0b62bd; --w-x: #c62828; --w-z: #a86200; --w-grid: #e4e9f0; --w-cursor: #6d35d9;
+  --t-c: #5f6976; --t-k: #a626a4; --t-t: #0b5cad; --t-f: #855600; --t-s: #ad4c00; --t-m: #0b7570; --t-n: #0a7848; --t-q: #a31515; --t-d: #bd175a;
+  --sel: rgba(11, 98, 189, 0.22); --cur: rgba(11, 98, 189, 0.06); --shadow: 0 1px 2px rgba(16, 24, 40, 0.06); --pop: 0 10px 28px rgba(16, 24, 40, 0.18);
   --mono: ui-monospace, "SF Mono", "Cascadia Code", "Cascadia Mono", Menlo, Consolas, "Liberation Mono", monospace;
   --sans: system-ui, -apple-system, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
   --lh: 20px;
@@ -21,44 +23,82 @@
     --bg: #0d1117; --panel: #151b24; --ink: #e4e9f0; --muted: #9aa6b6; --line: #29323f; --accent: #63adff; --accent-ink: #04121f;
     --err: #ff8f85; --err-bg: #3a1715; --code-bg: #10151c; --gutter: #627084; --mark: #40201e;
     --w-bit: #4cd98a; --w-bus: #6fb7ff; --w-x: #ff6b6b; --w-z: #ffb74d; --w-grid: #212a36; --w-cursor: #c4a1ff;
+    --t-c: #8492a3; --t-k: #d08fcb; --t-t: #6cb6ff; --t-f: #dcdcaa; --t-s: #e8ab6f; --t-m: #4ec9b0; --t-n: #b5cea8; --t-q: #d79b82; --t-d: #f291b3;
+    --sel: rgba(99, 173, 255, 0.3); --cur: rgba(99, 173, 255, 0.07); --shadow: none; --pop: 0 10px 28px rgba(0, 0, 0, 0.55);
   }
 }
 * { box-sizing: border-box; }
+html { -webkit-text-size-adjust: 100%; text-size-adjust: 100%; }
 html, body { height: 100%; }
 body { margin: 0; background: var(--bg); color: var(--ink); font: 14px/1.45 var(--sans); display: flex; flex-direction: column; }
 button, select, input, textarea { font: inherit; color: inherit; }
 :focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
 
 header { display: flex; flex-wrap: wrap; align-items: center; gap: 8px 14px; padding: 10px 16px; background: var(--panel); border-bottom: 1px solid var(--line); }
-h1 { font-size: 16px; margin: 0; font-weight: 650; letter-spacing: -0.01em; white-space: nowrap; }
+h1 { display: flex; align-items: center; gap: 10px; font-size: 16px; margin: 0; font-weight: 650; letter-spacing: -0.01em; white-space: nowrap; }
 h1 span { color: var(--muted); font-weight: 400; }
+h1 svg { flex: none; border-radius: 6px; background: var(--accent); stroke: var(--accent-ink); }
 .tools { display: flex; flex-wrap: wrap; align-items: center; gap: 8px; margin-left: auto; }
-.btn, select, input[type=search] { height: 32px; padding: 0 12px; border: 1px solid var(--line); border-radius: 6px; background: var(--panel); }
-.btn { cursor: pointer; white-space: nowrap; }
-.btn:hover:not(:disabled) { border-color: var(--muted); }
+.btn, select, input[type=search] { height: 32px; padding: 0 12px; border: 1px solid var(--line); border-radius: 7px; background: var(--panel); transition: background-color 0.12s, border-color 0.12s; }
+.btn { display: inline-flex; align-items: center; justify-content: center; gap: 7px; cursor: pointer; white-space: nowrap; }
+.btn svg { flex: none; fill: currentColor; }
+.btn:hover:not(:disabled), select:hover, input[type=search]:hover { border-color: var(--muted); }
+.btn:hover:not(:disabled):not(.primary) { background: var(--bg); }
+.btn:active:not(:disabled) { transform: translateY(1px); }
 .btn:disabled { opacity: 0.45; cursor: default; }
 .btn.primary { background: var(--accent); border-color: var(--accent); color: var(--accent-ink); font-weight: 600; }
+.btn.primary:hover:not(:disabled) { filter: brightness(1.1); }
 .btn.icon { width: 32px; padding: 0; }
 kbd { font: 11px var(--mono); padding: 1px 5px; border: 1px solid var(--line); border-radius: 4px; background: var(--bg); color: var(--muted); }
-.btn.primary kbd { background: transparent; border-color: currentColor; color: inherit; opacity: 0.8; }
+.btn.primary kbd { background: transparent; border-color: currentColor; color: inherit; opacity: 0.92; }
 a { color: var(--accent); }
 
 main { flex: 1; min-height: 0; display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 1fr); gap: 12px; padding: 12px 16px 16px; }
 .right { display: grid; grid-template-rows: minmax(140px, 2fr) minmax(180px, 3fr); gap: 12px; min-height: 0; }
-.panel { display: flex; flex-direction: column; min-height: 0; min-width: 0; background: var(--panel); border: 1px solid var(--line); border-radius: 8px; overflow: hidden; }
+.panel { display: flex; flex-direction: column; min-height: 0; min-width: 0; background: var(--panel); border: 1px solid var(--line); border-radius: 10px; box-shadow: var(--shadow); overflow: hidden; }
 .bar { display: flex; flex-wrap: wrap; align-items: center; gap: 6px 10px; padding: 6px 10px; min-height: 40px; border-bottom: 1px solid var(--line); }
 .bar h2 { font-size: 12px; font-weight: 650; text-transform: uppercase; letter-spacing: 0.06em; color: var(--muted); margin: 0; }
 .bar .sp { margin-left: auto; }
 .bar .btn, .bar select, .bar input { height: 28px; padding: 0 8px; font-size: 13px; }
 .bar .btn.icon { width: 28px; }
 .status { font-size: 13px; color: var(--muted); }
+#status::before { content: ""; display: inline-block; width: 8px; height: 8px; margin-right: 7px; border-radius: 50%; background: var(--gutter); }
+#status[data-state=run]::before { background: var(--accent); animation: pulse 0.7s ease-in-out infinite alternate; }
+#status[data-state=ok]::before { background: var(--w-bit); }
+#status[data-state=err]::before { background: var(--err); }
+#status[data-state=stop]::before { background: var(--w-z); }
+@keyframes pulse { to { opacity: 0.25; } }
+@media (prefers-reduced-motion: reduce) { #status::before { animation: none !important; } .btn, select, input, .fold svg { transition: none !important; } }
 
-.editor { position: relative; flex: 1; min-height: 0; display: flex; background: var(--code-bg); font: 13px/var(--lh) var(--mono); }
-#gutter { flex: none; min-width: 44px; padding: 10px 8px 10px 6px; margin: 0; text-align: right; color: var(--gutter); white-space: pre; overflow: hidden; user-select: none; border-right: 1px solid var(--line); font: inherit; }
-#src { flex: 1; min-width: 0; margin: 0; padding: 10px 12px; border: 0; resize: none; background: transparent; font: inherit; white-space: pre; overflow: auto; tab-size: 2; position: relative; z-index: 1; }
-#src:focus-visible { outline: none; }
+/* The editor is a <textarea> with transparent text on top of a <pre> that shows the same text in colour. The two must
+   lay their text out identically: same font, line height, padding, tab size, and no wrapping. */
+.editor { position: relative; flex: 1; min-height: 0; display: flex; overflow: hidden; background: var(--code-bg); font: 13px/var(--lh) var(--mono); tab-size: 2; }
+#gutter { position: relative; z-index: 1; flex: none; min-width: 44px; padding: 10px 8px 10px 6px; margin: 0; text-align: right; color: var(--gutter); white-space: pre; overflow: hidden; user-select: none; border-right: 1px solid var(--line); font: inherit; }
+.code { position: relative; flex: 1; min-width: 0; overflow: hidden; }
+#hl, #src { margin: 0; padding: 10px 12px; border: 0; font: inherit; letter-spacing: 0; white-space: pre; word-break: normal; overflow-wrap: normal; tab-size: 2; }
+#hl { position: absolute; top: 0; left: 0; min-width: 100%; color: var(--ink); pointer-events: none; }
+#src { position: absolute; top: 0; left: 0; width: 100%; height: 100%; resize: none; overflow: auto; background: transparent; color: transparent; caret-color: var(--ink); outline: none; z-index: 1; }
+.editor:not(.plain) #src::selection { background: var(--sel); color: transparent; }
+.editor.plain #src { color: inherit; }
+#ruler { position: absolute; top: 0; left: 0; visibility: hidden; white-space: pre; pointer-events: none; }
 .editor:focus-within { box-shadow: inset 0 0 0 2px var(--accent); }
-#mark { position: absolute; left: 0; right: 0; height: var(--lh); background: var(--mark); border-left: 3px solid var(--err); pointer-events: none; display: none; }
+#mark, #cur { position: absolute; left: 0; right: 0; height: var(--lh); pointer-events: none; display: none; }
+#mark { background: var(--mark); border-left: 3px solid var(--err); }
+#cur { background: var(--cur); }
+#hl .c { color: var(--t-c); } #hl .k { color: var(--t-k); } #hl .t { color: var(--t-t); } #hl .f { color: var(--t-f); } #hl .s { color: var(--t-s); }
+#hl .m { color: var(--t-m); } #hl .n { color: var(--t-n); } #hl .q { color: var(--t-q); } #hl .d { color: var(--t-d); }
+/* iOS draws a textarea's text 3px further in than its padding says, and that inset cannot be removed */
+@supports (-webkit-touch-callout: none) { #hl { padding-left: 15px; padding-right: 15px; } }
+
+#sug { position: fixed; z-index: 10; min-width: 210px; max-width: min(380px, calc(100vw - 8px)); background: var(--panel); border: 1px solid var(--line); border-radius: 8px; box-shadow: var(--pop); overflow: hidden; }
+#sug ul { list-style: none; margin: 0; padding: 4px; max-height: 216px; overflow-y: auto; font: 13px var(--mono); }
+#sug li { display: flex; align-items: center; gap: 18px; height: 26px; padding: 0 8px; border-radius: 5px; white-space: nowrap; cursor: pointer; }
+#sug li span { overflow: hidden; text-overflow: ellipsis; }
+#sug li i { margin-left: auto; font: 11px var(--sans); color: var(--muted); }
+#sug li:hover { background: var(--bg); }
+#sug li[aria-selected=true] { background: var(--accent); color: var(--accent-ink); }
+#sug li[aria-selected=true] i { color: inherit; opacity: 0.85; }
+#sug p { margin: 0; padding: 5px 10px; border-top: 1px solid var(--line); font: 11px var(--sans); color: var(--muted); white-space: nowrap; }
 
 #out { flex: 1; min-height: 0; margin: 0; padding: 10px 12px; overflow: auto; font: 13px/1.5 var(--mono); white-space: pre-wrap; overflow-wrap: anywhere; background: var(--code-bg); }
 #out .hint { color: var(--muted); font-family: var(--sans); }
@@ -76,6 +116,21 @@ main { flex: 1; min-height: 0; display: grid; grid-template-columns: minmax(0, 1
 #wave { display: block; width: 100%; touch-action: pan-y; cursor: crosshair; }
 .wempty { margin: auto; padding: 24px; color: var(--muted); text-align: center; }
 #filter { width: 130px; }
+.wn.on { background: var(--cur); }
+.wtools { display: contents; }
+.seg { display: inline-flex; }
+.seg .btn { border-radius: 0; margin-left: -1px; }
+.seg .btn:first-child { margin-left: 0; border-radius: 7px 0 0 7px; }
+.seg .btn:last-child { border-radius: 0 7px 7px 0; }
+.seg .btn:hover, .seg .btn:focus-visible { position: relative; z-index: 1; }
+/* the panel's title is a button that hides it: the panel shrinks to its title bar and the output takes the room */
+.fold { display: inline-flex; align-items: center; gap: 6px; margin: 0 -6px; padding: 4px 6px; border: 0; border-radius: 5px; background: none; font: inherit; letter-spacing: inherit; text-transform: inherit; color: inherit; cursor: pointer; }
+.fold:hover { background: var(--bg); color: var(--ink); }
+.fold svg { fill: none; stroke: currentColor; stroke-width: 1.8; stroke-linecap: round; stroke-linejoin: round; transition: transform 0.15s; }
+.right.nowaves { grid-template-rows: minmax(0, 1fr) auto; }
+.nowaves .wtools, .nowaves .wscroll, .nowaves #readout { display: none; }
+.nowaves #wbar { border-bottom: 0; }
+.nowaves .fold svg { transform: rotate(-90deg); }
 
 dialog { max-width: min(640px, calc(100vw - 32px)); border: 1px solid var(--line); border-radius: 10px; background: var(--panel); color: var(--ink); padding: 20px 22px; }
 dialog::backdrop { background: rgba(0, 0, 0, 0.45); }
@@ -87,7 +142,7 @@ dialog code { font: 12.5px var(--mono); }
 dialog form { margin-top: 16px; text-align: right; }
 
 /* after every `font:` shorthand above, which would reset these: keep <= and != as typed */
-.editor, #src, #gutter, #out, #err, .wnames, code { font-variant-ligatures: none; font-feature-settings: "liga" 0, "calt" 0; }
+.editor, #src, #hl, #gutter, #sug ul, #out, #err, .wnames, code { font-variant-ligatures: none; font-feature-settings: "liga" 0, "calt" 0; }
 
 @media (max-width: 900px) {
   html, body { height: auto; }
@@ -104,12 +159,12 @@ dialog form { margin-top: 16px; text-align: right; }
 </head>
 <body>
 <header>
-  <h1>Verilog Interpreter <span>— runs in your browser</span></h1>
+  <h1><svg width="26" height="26" viewBox="0 0 32 32" fill="none" stroke-width="2.5" stroke-linejoin="round" aria-hidden="true"><path d="M4 22h6V10h6v12h6V10h6"/></svg>Verilog Interpreter <span>— runs in your browser</span></h1>
   <div class="tools">
     <label for="examples" class="status">Example</label>
     <select id="examples"></select>
-    <button class="btn primary" id="run" title="Run the simulation (Ctrl+Enter)">Run <kbd>Ctrl ↵</kbd></button>
-    <button class="btn" id="stop" disabled>Stop</button>
+    <button class="btn primary" id="run" title="Run the simulation (Ctrl+Enter)"><svg width="10" height="12" viewBox="0 0 10 12" aria-hidden="true"><path d="M0 0v12l10-6z"/></svg>Run <kbd>Ctrl ↵</kbd></button>
+    <button class="btn" id="stop" disabled><svg width="10" height="10" viewBox="0 0 10 10" aria-hidden="true"><rect width="10" height="10" rx="1.5"/></svg>Stop</button>
     <button class="btn" id="help" aria-haspopup="dialog">Help</button>
   </div>
 </header>
@@ -117,14 +172,19 @@ dialog form { margin-top: 16px; text-align: right; }
 <main>
   <section class="panel" aria-label="Verilog source">
     <div class="bar"><h2>Source</h2><span class="status sp" id="pos"></span></div>
-    <div class="editor">
+    <div class="editor" id="editor">
+      <div id="cur"></div>
       <div id="mark"></div>
       <pre id="gutter" aria-hidden="true">1</pre>
-      <textarea id="src" aria-label="Verilog source code" spellcheck="false" autocomplete="off" autocapitalize="off" autocorrect="off" wrap="off"></textarea>
+      <div class="code">
+        <pre id="hl" aria-hidden="true"></pre>
+        <textarea id="src" aria-label="Verilog source code" aria-autocomplete="list" aria-controls="sug-list" spellcheck="false" autocomplete="off" autocapitalize="off" autocorrect="off" wrap="off"></textarea>
+        <span id="ruler" aria-hidden="true"></span>
+      </div>
     </div>
   </section>
 
-  <div class="right">
+  <div class="right" id="right">
     <section class="panel" aria-label="Simulation output">
       <div class="bar"><h2>Output</h2><span class="status sp" id="status" role="status">Ready</span></div>
       <pre id="out" role="log" aria-live="polite" tabindex="0"><span class="hint">Press Run to simulate. Text printed with $display, $write, $strobe and $monitor appears here.</span></pre>
@@ -132,15 +192,19 @@ dialog form { margin-top: 16px; text-align: right; }
     </section>
 
     <section class="panel" aria-label="Waveforms">
-      <div class="bar">
-        <h2>Waveforms</h2>
+      <div class="bar" id="wbar">
+        <h2><button class="fold" id="wfold" aria-expanded="true" aria-controls="wscroll" title="Hide waveforms"><svg width="10" height="10" viewBox="0 0 10 10" aria-hidden="true"><path d="M1.5 3.5l3.5 3.5 3.5-3.5"/></svg>Waveforms</button></h2>
         <span class="status" id="readout"></span>
         <span class="sp"></span>
-        <input type="search" id="filter" placeholder="Filter signals" aria-label="Filter signals by name">
-        <select id="radix" aria-label="Number format for buses"><option value="hex">hex</option><option value="dec">decimal</option><option value="bin">binary</option></select>
-        <button class="btn icon" id="zin" title="Zoom in (+)" aria-label="Zoom in">+</button>
-        <button class="btn icon" id="zout" title="Zoom out (−)" aria-label="Zoom out">−</button>
-        <button class="btn" id="zfit" title="Show the whole simulation (0)">Fit</button>
+        <span class="wtools">
+          <input type="search" id="filter" placeholder="Filter signals" aria-label="Filter signals by name">
+          <select id="radix" aria-label="Number format for buses"><option value="hex">hex</option><option value="dec">decimal</option><option value="bin">binary</option></select>
+          <span class="seg">
+            <button class="btn icon" id="zin" title="Zoom in (+)" aria-label="Zoom in">+</button>
+            <button class="btn icon" id="zout" title="Zoom out (−)" aria-label="Zoom out">−</button>
+            <button class="btn" id="zfit" title="Show the whole simulation (0)">Fit</button>
+          </span>
+        </span>
       </div>
       <div class="wscroll" id="wscroll">
         <p class="wempty" id="wempty">Waveforms of every wire and reg appear here after a run.</p>
@@ -151,6 +215,11 @@ dialog form { margin-top: 16px; text-align: right; }
   </div>
 </main>
 
+<div id="sug" hidden>
+  <ul id="sug-list" role="listbox" aria-label="Suggestions"></ul>
+  <p aria-hidden="true"><kbd>Tab</kbd> inserts · <kbd>↑</kbd> <kbd>↓</kbd> choose · <kbd>Esc</kbd> closes</p>
+</div>
+
 <dialog id="about" aria-labelledby="about-h">
   <h2 id="about-h">Verilog Interpreter</h2>
   <p>An event-driven, 4-state (0, 1, x, z) Verilog-2001 simulator written in plain JavaScript. Your code is simulated on this device; nothing is uploaded.</p>
@@ -158,8 +227,9 @@ dialog form { margin-top: 16px; text-align: right; }
   <ul>
     <li>Write one or more modules. Any module that nobody instantiates is run as a top-level testbench.</li>
     <li><kbd>Ctrl</kbd>+<kbd>Enter</kbd> runs. End the simulation with <code>$finish</code>, or press Stop.</li>
-    <li>In the waveform view drag to pan, <kbd>Ctrl</kbd>+scroll or <kbd>+</kbd>/<kbd>−</kbd> to zoom, hover to read values.</li>
-    <li>In the editor <kbd>Tab</kbd> indents; press <kbd>Esc</kbd> first to move focus out with <kbd>Tab</kbd>.</li>
+    <li>In the waveform view drag to pan, <kbd>Ctrl</kbd>+scroll or <kbd>+</kbd>/<kbd>−</kbd> to zoom, hover to read values. Click the panel's title to hide it and to bring it back.</li>
+    <li>The editor closes brackets and quotes, keeps your indentation, and suggests keywords, system tasks and the names in your code as you type: <kbd>Tab</kbd> inserts the highlighted suggestion, <kbd>↑</kbd> <kbd>↓</kbd> then <kbd>Enter</kbd> picks another, and <kbd>Ctrl</kbd>+<kbd>Space</kbd> opens the list.</li>
+    <li>Otherwise <kbd>Tab</kbd> indents; press <kbd>Esc</kbd> first to move focus out with <kbd>Tab</kbd>.</li>
   </ul>
   <h3>Supported</h3>
   <p>Modules, parameters and overrides, ANSI and classic port lists, <code>generate</code> for/if/case, hierarchical names, gate primitives, continuous assignments with rise/fall delays, tri-state and multi-driver wires, <code>wand</code>/<code>wor</code>, <code>tri0</code>/<code>tri1</code>, <code>pullup</code>/<code>pulldown</code>, <code>inout</code> ports, <code>always</code>/<code>initial</code>, blocking and nonblocking assignments, delays and event controls, <code>wait</code>, <code>fork</code>/<code>join</code>, named events, <code>disable</code>, functions and tasks (including <code>automatic</code>), memories, signed arithmetic, reals, <code>`define</code>/<code>`ifdef</code>/<code>`timescale</code>, and <code>$display $write $strobe $monitor $time $realtime $timeformat $random $signed $unsigned $clog2 $bits $sformat $finish</code>.</p>
@@ -470,41 +540,186 @@ endmodule
 </script>
 
 <script src="verilog.js"></script>
+<script src="highlight.js"></script>
 <script>
 'use strict';
 const $ = id => document.getElementById(id);
 const src = $('src'), gutter = $('gutter'), out = $('out'), errBox = $('err'), statusEl = $('status'), mark = $('mark');
-const LH = 20, PAD = 10, KEY = 'verilog-interpreter:source';
-const store = { get() { try { return localStorage.getItem(KEY); } catch (e) { return null; } }, set(v) { try { localStorage.setItem(KEY, v); } catch (e) { /* private mode */ } } };
+const hl = $('hl'), cur = $('cur'), ruler = $('ruler'), sugBox = $('sug'), sugList = $('sug-list');
+const LH = 20, PAD = 10, PADX = 12, KEY = 'verilog-interpreter:source';
+const store = { get(k = KEY) { try { return localStorage.getItem(k); } catch (e) { return null; } }, set(v, k = KEY) { try { localStorage.setItem(k, v); } catch (e) { /* private mode */ } } };
 
 // ── editor ──
-let errLine = 0, dirty = false, escTab = false;
+// ponytail: the whole text is coloured again on every edit (a few ms for a few thousand lines). Past HL_MAX characters
+// the editor shows plain text instead; colour only the changed lines if large files ever matter.
+const HL_MAX = 300000;
+let errLine = 0, curLine = 1, dirty = false, escTab = false;
+let toks = [], names = new Set();           // from the last paint: comments and strings, and the identifiers in the text
+function paint() {
+  const big = src.value.length > HL_MAX;
+  $('editor').classList.toggle('plain', big);
+  if (big) { hl.textContent = ''; toks = []; return; }
+  const h = Highlight.highlight(src.value);
+  hl.innerHTML = h.html; toks = h.toks; names = h.names;
+}
+function inText(p) {                        // is position p inside a comment or a string?
+  for (const [s, e, open] of toks) { if (s >= p) break; if (p < e || (open && p === e)) return true; }
+  return false;
+}
+function bar(el, line) {                    // put a full-width line marker on a line, if that line is on screen
+  const y = PAD + (line - 1) * LH - src.scrollTop;
+  el.style.display = line && y > -LH && y < src.clientHeight ? 'block' : 'none';
+  el.style.top = y + 'px';
+}
 function syncGutter() {
   const n = src.value.split('\n').length;
   if (gutter.dataset.n != n) { let s = ''; for (let i = 1; i <= n; i++) s += i + '\n'; gutter.textContent = s; gutter.dataset.n = n; }
+  gutter.style.paddingBottom = PAD + src.offsetHeight - src.clientHeight + 'px';      // as far to scroll as the text, which loses room to its horizontal scrollbar
   gutter.scrollTop = src.scrollTop;
-  const y = PAD + (errLine - 1) * LH - src.scrollTop;
-  mark.style.display = errLine && y > -LH && y < src.clientHeight ? 'block' : 'none';
-  mark.style.top = y + 'px';
+  hl.style.transform = `translate(${-src.scrollLeft}px, ${-src.scrollTop}px)`;
+  bar(mark, errLine); bar(cur, document.activeElement === src ? curLine : 0);
+  if (sug) place();
 }
-function caret() { const before = src.value.slice(0, src.selectionStart).split('\n'); $('pos').textContent = `Ln ${before.length}, Col ${before[before.length - 1].length + 1}`; }
+function caret() {
+  const before = src.value.slice(0, src.selectionStart).split('\n');
+  curLine = before.length;
+  $('pos').textContent = `Ln ${curLine}, Col ${before[before.length - 1].length + 1}`;
+  if (sug && src.selectionStart !== sug.at) closeSug();
+  syncGutter();
+}
 function gotoLine(n) {
   const lines = src.value.split('\n'); let a = 0;
   for (let i = 0; i < n - 1 && i < lines.length; i++) a += lines[i].length + 1;
   src.focus(); src.setSelectionRange(a, a + (lines[n - 1] || '').length);
-  src.scrollTop = Math.max(0, (n - 4) * LH); syncGutter(); caret();
+  src.scrollTop = Math.max(0, (n - 4) * LH); caret();
 }
-function setSource(text) { src.value = text; errLine = 0; src.scrollTop = 0; syncGutter(); caret(); }
-src.addEventListener('input', () => { dirty = true; errLine = 0; syncGutter(); store.set(src.value); });
+function setSource(text) { src.value = text; src.setSelectionRange(0, 0); errLine = 0; src.scrollTop = src.scrollLeft = 0; paint(); caret(); }
+
+// Every change the editor makes for you goes through the browser's own editing command, so that undo still works.
+let editing = false;
+function edit(a, b, text, sel) {            // replace [a, b) with text, then put the caret at sel (default: after the text)
+  editing = true;
+  src.setSelectionRange(a, b);
+  if (!(text ? document.execCommand('insertText', false, text) : document.execCommand('delete'))) { src.setRangeText(text, a, b, 'end'); src.dispatchEvent(new Event('input')); }
+  if (sel !== undefined) src.setSelectionRange(sel, sel);
+  editing = false;
+  caret();
+}
+
+// Brackets and quotes close themselves, typing a closer that is already there steps over it, Backspace removes an
+// empty pair, Enter keeps the indentation (one level deeper after "begin", "case (…)" or an opening bracket), and a
+// finished "end" moves under its "begin".
+const PAIR = { '(': ')', '[': ']', '{': '}', '"': '"' };
+const OPENS = /(?:\b(?:begin|fork)\b(?:\s*:\s*\w+)?|\bgenerate|\bcase[xz]?\s*\(.*\)|[(\[{])\s*$/;
+const OPENER = { end: 'begin', endcase: 'case[xz]?', endmodule: 'module', endfunction: 'function', endtask: 'task', endgenerate: 'generate', join: 'fork' };
+const code = line => line.replace(/\s*\/\/.*$/, '');
+const escaped = (v, i) => /\\*$/.exec(v.slice(Math.max(0, i - 200), i))[0].length % 2 === 1;      // is the character at i behind an odd run of backslashes?
+src.addEventListener('beforeinput', e => {
+  if (editing || e.isComposing) return;
+  const type = e.inputType, ch = e.data, br = type === 'insertLineBreak' || type === 'insertParagraph';
+  if (br || (type === 'insertText' && ch && /^[^\w$]$/.test(ch))) dedent();        // the word before the caret is complete
+  const v = src.value, a = src.selectionStart, b = src.selectionEnd, next = v[b] || '', text = inText(a);
+  if (type === 'insertText' && ch && ch.length === 1) {
+    // ponytail: any matching closer is stepped over, not only one the editor added; type it twice to really insert one
+    if (a === b && next === ch && (ch === '"' ? text && !escaped(v, a) : !text && ')]}'.includes(ch))) { e.preventDefault(); src.setSelectionRange(a + 1, a + 1); caret(); return; }
+    if (!PAIR[ch] || text) return;
+    if (a !== b) { e.preventDefault(); edit(a, b, ch + v.slice(a, b) + PAIR[ch]); src.setSelectionRange(a + 1, b + 1); }
+    else if (/^[\s)\]},;]?$/.test(next) && !(ch === '"' && /[\w"]/.test(v[a - 1] || ''))) { e.preventDefault(); edit(a, a, ch + PAIR[ch], a + 1); }
+  } else if (type === 'deleteContentBackward' && a === b && a && PAIR[v[a - 1]] === next && (next === '"' ? !escaped(v, a - 1) : !text)) {
+    e.preventDefault(); edit(a - 1, a + 1, '');
+  } else if (br) {
+    const ls = v.lastIndexOf('\n', a - 1) + 1, line = v.slice(ls, a), ind = /^[ \t]*/.exec(line)[0], c = code(line).trimEnd();
+    const deeper = OPENS.test(c) && !inText(ls + c.length - 1) ? '  ' : '';        // (not when that "begin" or bracket is inside a comment or a string)
+    if (!ind && !deeper) return;
+    const closer = deeper && a === b && ')]}'.includes(next || ' ') && PAIR[v[a - 1]] === next ? '\n' + ind : '';   // Enter between ( and ): the ) gets its own line
+    e.preventDefault(); edit(a, b, '\n' + ind + deeper + closer, a + 1 + ind.length + deeper.length);
+  }
+});
+// A closing keyword alone on its line ("end", "endcase", "endmodule", "join" …) gets the indentation of the line that
+// opened its block. Called when the word is finished, so that a name such as end_flag is left alone.
+function dedent() {
+  const v = src.value, a = src.selectionStart, ls = v.lastIndexOf('\n', a - 1) + 1, m = /^([ \t]*)(\w+)$/.exec(v.slice(ls, a)), eol = v.indexOf('\n', a);
+  if (a !== src.selectionEnd || !m || !OPENER.hasOwnProperty(m[2]) || inText(a) || v.slice(a, eol < 0 ? v.length : eol).trim()) return;
+  const re = new RegExp('\\b(?:' + OPENER[m[2]] + '|' + m[2] + ')\\b', 'g'), lines = v.slice(0, ls).split('\n');
+  for (let i = lines.length - 2, depth = 0; i >= 0; i--) {                          // walk up to the opener that is not closed yet
+    const found = code(lines[i]).match(re) || [];
+    for (let k = found.length - 1; k >= 0; k--) {
+      if (found[k] === m[2]) depth++;
+      else if (depth-- === 0) {
+        const ind = /^[ \t]*/.exec(lines[i])[0];
+        if (ind !== m[1]) edit(ls, ls + m[1].length, ind, a + ind.length - m[1].length);
+        return;
+      }
+    }
+  }
+}
+
+// Suggestions: keywords, system tasks, directives and the names already in the text, offered while a word is typed.
+let sug = null;                             // { from, at, items, i, picked } while the list is open
+const WORD_SET = new Set(Highlight.WORDS.map(w => w[0]));
+function closeSug() { if (!sug) return; sug = null; sugBox.hidden = true; src.removeAttribute('aria-activedescendant'); }
+function suggest(force) {
+  const v = src.value, a = src.selectionStart;
+  const run = /[\w$`]*$/.exec(v.slice(Math.max(0, a - 80), a))[0], from = a - run.length;
+  const ok = a === src.selectionEnd && !inText(a) && !/[\w$]/.test(v[a] || '') && v[from - 1] !== "'" && /^(?:[$`]?[A-Za-z_][\w$]*|[$`]|)$/.test(run);
+  if (!ok || run.length < (force ? 0 : /^[$`]/.test(run) ? 1 : 2)) return closeSug();
+  const low = run.toLowerCase(), items = [];
+  for (const n of names) if (!WORD_SET.has(n)) items.push([n, n[0] === '`' ? 'macro' : 'name']);
+  items.sort((x, y) => x[0] < y[0] ? -1 : 1);                                    // names first, then the built-in words in their own order
+  const found = items.concat(Highlight.WORDS).filter(w => w[0] !== run && w[0].toLowerCase().startsWith(low));
+  found.sort((x, y) => y[0].startsWith(run) - x[0].startsWith(run));             // stable: same case first, the order above otherwise
+  if (!found.length) return closeSug();
+  sug = { from, at: a, items: found.slice(0, 80), i: 0, picked: false };
+  sugList.textContent = '';
+  sug.items.forEach(([w, kind], i) => {
+    const li = document.createElement('li'), name = document.createElement('span'), k = document.createElement('i');
+    li.id = 'sug-' + i; li.setAttribute('role', 'option'); name.textContent = w; k.textContent = kind; li.append(name, k);
+    li.addEventListener('mousedown', e => { e.preventDefault(); if (e.button === 0) { sug.i = i; accept(); } });      // preventDefault: the editor keeps the focus
+    sugList.append(li);
+  });
+  sugBox.hidden = false; sugList.scrollTop = 0;
+  pick(0); place();
+}
+function pick(i) {
+  const n = sug.items.length; sug.i = (i + n) % n;
+  [...sugList.children].forEach((li, k) => li.setAttribute('aria-selected', k === sug.i));
+  const li = sugList.children[sug.i];
+  if (li.offsetTop < sugList.scrollTop) sugList.scrollTop = li.offsetTop - 4;
+  else if (li.offsetTop + li.offsetHeight > sugList.scrollTop + sugList.clientHeight) sugList.scrollTop = li.offsetTop + li.offsetHeight - sugList.clientHeight + 4;
+  src.setAttribute('aria-activedescendant', li.id);
+}
+function place() {                          // under the start of the word being typed (above it when there is no room below)
+  const v = src.value;
+  ruler.textContent = v.slice(v.lastIndexOf('\n', sug.from - 1) + 1, sug.from);
+  const r = src.getBoundingClientRect(), x = r.left + PADX + ruler.getBoundingClientRect().width - src.scrollLeft, y = r.top + PAD + curLine * LH - src.scrollTop;
+  if (y - LH < r.top - 2 || y > r.bottom + 2) return closeSug();
+  const w = sugBox.offsetWidth, h = sugBox.offsetHeight;
+  sugBox.style.left = Math.max(4, Math.min(x - 13, innerWidth - w - 4)) + 'px';      // 13: the list's border and padding, so the words line up
+  sugBox.style.top = (y + 2 + h > innerHeight - 4 && y - LH - 2 - h >= 4 ? y - LH - 2 - h : y + 2) + 'px';
+}
+function accept() { const s = sug; closeSug(); edit(s.from, s.at, s.items[s.i][0]); dedent(); }
+
+src.addEventListener('input', e => {
+  dirty = true; errLine = 0; paint(); caret(); store.set(src.value);
+  if (editing) return;
+  if (e.inputType === 'insertText' || e.inputType === 'insertCompositionText' || (sug && e.inputType === 'deleteContentBackward')) suggest(); else closeSug();
+});
 src.addEventListener('scroll', syncGutter);
 for (const ev of ['keyup', 'click', 'focus']) src.addEventListener(ev, caret);
+src.addEventListener('blur', () => { closeSug(); syncGutter(); });
+document.addEventListener('selectionchange', () => { if (document.activeElement === src) caret(); });
+window.addEventListener('scroll', closeSug);          // the page itself scrolled (narrow screens): the list would be left behind
 src.addEventListener('keydown', e => {
-  if (e.key === 'Escape') { escTab = true; return; }
-  if (e.key === 'Tab' && !escTab && !e.ctrlKey && !e.metaKey && !e.altKey) {
-    e.preventDefault();
-    if (!document.execCommand('insertText', false, '  ')) src.setRangeText('  ', src.selectionStart, src.selectionEnd, 'end');
-    src.dispatchEvent(new Event('input'));
+  const plainKey = !e.ctrlKey && !e.metaKey && !e.altKey;
+  if (sug) {
+    if (plainKey && !e.shiftKey && (e.key === 'ArrowDown' || e.key === 'ArrowUp')) { e.preventDefault(); sug.picked = true; pick(sug.i + (e.key === 'ArrowDown' ? 1 : -1)); return; }
+    // Enter only inserts a suggestion that was chosen with the arrows: "end" followed by Enter must stay a new line
+    if (plainKey && ((e.key === 'Tab' && !e.shiftKey) || (e.key === 'Enter' && sug.picked))) { e.preventDefault(); accept(); return; }
+    if (e.key === 'Escape') { e.preventDefault(); closeSug(); escTab = true; return; }      // (Esc then Tab still leaves the editor)
   }
+  if (e.key === ' ' && e.ctrlKey) { e.preventDefault(); suggest(true); return; }
+  if (e.key === 'Escape') { escTab = true; return; }
+  if (e.key === 'Tab' && !escTab && plainKey) { e.preventDefault(); edit(src.selectionStart, src.selectionEnd, '  '); }
   escTab = false;
 });
 window.addEventListener('resize', syncGutter);
@@ -527,6 +742,7 @@ dirty = !!(saved && saved.trim()) && !examples.some(e => e.text === saved);
 let worker = null, running = false, gotOutput = false;
 const OPTS = { maxOps: 3e7, maxOutput: 1e6 };
 function setRunning(on) { running = on; $('stop').disabled = !on; $('run').disabled = on; }
+function setStatus(text, state) { statusEl.textContent = text; statusEl.dataset.state = state; }      // state colours the dot: run, ok, err, stop
 function append(text) {
   if (!text) return;
   const stick = out.scrollHeight - out.scrollTop - out.clientHeight < 40;
@@ -542,13 +758,13 @@ function done(m) {
   const ms = m.ms ? ` · ${m.ms < 1000 ? Math.round(m.ms) + ' ms' : (m.ms / 1000).toFixed(1) + ' s'}` : '';
   const at = m.time !== undefined ? ` at t = ${m.time}${m.waves ? unitOf(m.waves.prec) : ''}` : '';
   if (m.error) {
-    statusEl.textContent = 'Error' + ms;
+    setStatus('Error' + ms, 'err');
     errBox.textContent = m.error; errBox.hidden = false;
     if (m.errorLine) {
       errLine = m.errorLine; syncGutter();
       const b = document.createElement('button'); b.textContent = `Go to line ${m.errorLine}`; b.onclick = () => gotoLine(m.errorLine); errBox.append(b);
     }
-  } else statusEl.textContent = (m.finished ? 'Finished' : m.stopped ? `Stopped (${m.stopped})` : 'No more events') + at + ms;
+  } else setStatus((m.finished ? 'Finished' : m.stopped ? `Stopped (${m.stopped})` : 'No more events') + at + ms, m.stopped && !m.finished ? 'stop' : 'ok');
   if (!gotOutput) hint(m.error ? '' : 'The simulation printed nothing. Use $display("...") to print, and look at the waveforms below.');
   showWaves(m.waves || null);
 }
@@ -563,7 +779,7 @@ function runInline(source) {                // no Worker (e.g. opened from file:
 function run() {
   if (running) return;
   gotOutput = false; errBox.hidden = true; errBox.textContent = ''; errLine = 0; syncGutter();
-  hint('Running…'); statusEl.textContent = 'Running…'; setRunning(true);
+  hint('Running…'); setStatus('Running…', 'run'); setRunning(true);
   const source = src.value;
   let started = false;
   try { worker = new Worker('worker.js'); } catch (e) { worker = null; }
@@ -575,7 +791,7 @@ function run() {
 function stop() {
   if (!running) return;
   if (worker) { worker.terminate(); worker = null; }
-  setRunning(false); statusEl.textContent = 'Stopped';
+  setRunning(false); setStatus('Stopped', 'stop');
   if (!gotOutput) hint('Stopped before anything was printed.');
 }
 $('run').addEventListener('click', run);
@@ -585,8 +801,21 @@ document.addEventListener('keydown', e => { if ((e.ctrlKey || e.metaKey) && e.ke
 
 // ── waveforms ──
 const ROW = 28, AXIS = 24;
-const W = { data: null, rows: [], t0: 0, t1: 1, maxT: 1, cursor: null, radix: 'hex', filter: '' };
+const W = { data: null, rows: [], t0: 0, t1: 1, maxT: 1, cursor: null, radix: 'hex', filter: '', hover: -1 };
 const cv = $('wave');
+function foldWaves(hide) {                  // the Waveforms panel can be shut to give the output the whole column
+  $('right').classList.toggle('nowaves', hide);
+  $('wfold').setAttribute('aria-expanded', !hide); $('wfold').title = hide ? 'Show waveforms' : 'Hide waveforms';
+  store.set(hide ? 'hidden' : 'shown', KEY + ':waves');
+  if (!hide) draw();
+}
+$('wfold').addEventListener('click', () => foldWaves(!$('right').classList.contains('nowaves')));
+if (store.get(KEY + ':waves') === 'hidden') foldWaves(true);
+function setHover(i) {                      // the row under the pointer, lit in the name list and in the plot
+  if (i === W.hover) return false;
+  W.hover = i; W.rows.forEach((s, k) => s.el.parentNode.classList.toggle('on', k === i));
+  return true;
+}
 function fmtVal(s, v) {
   if (s.real || s.w === 1 || W.radix === 'bin') return v;
   const known = !/[xz]/.test(v);
@@ -611,7 +840,7 @@ function showWaves(w) {
 function buildRows() {
   if (!W.data) return;
   const f = W.filter.trim().toLowerCase(), all = W.data.signals.filter(s => !f || s.name.toLowerCase().includes(f));
-  W.rows = all.slice(0, 200);
+  W.rows = all.slice(0, 200); W.hover = -1;
   const box = $('wnames'); box.textContent = '';
   for (const s of W.rows) {
     const d = document.createElement('div'); d.className = 'wn'; d.title = `${s.name}${s.w > 1 ? ` [${s.w} bits]` : ''}`;
@@ -647,6 +876,7 @@ function draw() {
   }
   W.rows.forEach((s, i) => {
     const y0 = AXIS + i * ROW, hi = y0 + 6.5, lo = y0 + ROW - 6.5, mid = (hi + lo) / 2, ch = s.changes, bit = s.w === 1 && !s.real;
+    if (i === W.hover) { c.fillStyle = col('--cur'); c.fillRect(0, y0, cssW, ROW); }
     c.strokeStyle = cGrid; c.lineWidth = 1; c.beginPath(); c.moveTo(0, y0 + ROW - 0.5); c.lineTo(cssW, y0 + ROW - 0.5); c.stroke();
     c.lineWidth = 1.5;
     let py = null, px = -1;
@@ -664,6 +894,7 @@ function draw() {
           c.beginPath(); py = null; continue;
         }
         const y = v === '1' ? hi : lo;
+        if (v === '1') { c.fillStyle = cBit; c.globalAlpha = 0.13; c.fillRect(xa, hi, xb - xa, lo - hi); c.globalAlpha = 1; }      // a soft fill under every high stretch
         if (py === null) c.moveTo(xa, y); else c.lineTo(xa, y);
         c.lineTo(xb, y); py = y;
       } else {
@@ -671,7 +902,7 @@ function draw() {
         if (wpx < 3) { if (Math.round(xa) !== px) { c.fillStyle = colr; c.fillRect(xa, hi, 1.2, lo - hi); px = Math.round(xa); } continue; }
         const e = Math.min(3, wpx / 2);
         c.beginPath(); c.moveTo(xa, mid); c.lineTo(xa + e, hi); c.lineTo(xb - e, hi); c.lineTo(xb, mid); c.lineTo(xb - e, lo); c.lineTo(xa + e, lo); c.closePath();
-        if (unk && !s.real) { c.fillStyle = colr; c.globalAlpha = 0.22; c.fill(); c.globalAlpha = 1; }
+        c.fillStyle = colr; c.globalAlpha = unk && !s.real ? 0.22 : 0.08; c.fill(); c.globalAlpha = 1;
         c.strokeStyle = colr; c.stroke();
         const label = fmtVal(s, v), room = Math.floor((wpx - 10) / 6.7);
         if (room >= 1) { c.fillStyle = cInk; c.fillText(label.length <= room ? label : room > 2 ? label.slice(0, room - 1) + '…' : '', xa + 5, mid + 0.5); }
@@ -682,6 +913,8 @@ function draw() {
   if (W.cursor !== null && W.cursor >= W.t0 && W.cursor <= W.t1) {
     const x = Math.round(X(W.cursor)) + 0.5;
     c.strokeStyle = col('--w-cursor'); c.lineWidth = 1; c.beginPath(); c.moveTo(x, 0); c.lineTo(x, cssH); c.stroke();
+    const tag = String(W.cursor), tw = c.measureText(tag).width + 10, tx = Math.min(Math.max(x - tw / 2, 0), cssW - tw);      // the time, on the axis
+    c.fillStyle = col('--w-cursor'); c.fillRect(tx, 4, tw, 16); c.fillStyle = col('--code-bg'); c.fillText(tag, tx + 5, 12.5);
   }
   const at = W.cursor === null ? W.data.end : W.cursor;
   for (const s of W.rows) s.el.textContent = fmtVal(s, s.changes[idxAt(s.changes, at)][1]);
@@ -698,8 +931,12 @@ cv.addEventListener('pointermove', e => {
     if (Math.abs(dx) > 3) drag.moved = true;
     if (drag.moved) { const dt = -dx / cv.getBoundingClientRect().width * (drag.t1 - drag.t0); view(drag.t0 + dt, drag.t1 + dt); return; }
   }
+  setHover(Math.floor((e.clientY - cv.getBoundingClientRect().top - AXIS) / ROW));
   W.cursor = Math.min(Math.max(Math.round(tAt(e)), 0), W.data.end); draw();
 });
+cv.addEventListener('pointerleave', () => { if (setHover(-1)) draw(); });
+$('wnames').addEventListener('pointermove', e => { const d = e.target.closest('.wn'); if (setHover(d ? [...d.parentNode.children].indexOf(d) : -1)) draw(); });
+$('wnames').addEventListener('pointerleave', () => { if (setHover(-1)) draw(); });
 cv.addEventListener('pointerup', () => { drag = null; });
 cv.addEventListener('pointercancel', () => { drag = null; });
 cv.addEventListener('wheel', e => {
