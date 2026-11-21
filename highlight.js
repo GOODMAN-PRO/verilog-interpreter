@@ -86,7 +86,30 @@ function highlight(text) {
   }
   let html = '';
   for (const [t, c] of out) html += c ? '<span class="' + c + '">' + esc(t) + '</span>' : esc(t);
-  return { html, toks, names };
+  return { html: guides(html), toks, names };
+}
+
+// Indent guides. Every line that is indented gets an empty <i> in front, as wide as its indentation rounded up to a whole
+// level (two columns); the page draws a vertical line in it at every level. A blank line has no indentation of its own,
+// so it takes the deeper of the lines around it and the guides run on through it. The <i> holds no text, so the text of
+// the result is still exactly the text that came in.
+function guides(html) {
+  const lines = html.split('\n'), own = [], blank = [], above = [];
+  let last = 0;
+  lines.forEach((l, i) => {
+    const ws = /^[ \t]*/.exec(l)[0];
+    let w = 0;
+    for (const ch of ws) w += ch === '\t' ? 2 - w % 2 : 1;       // a tab runs to the next even column
+    own[i] = w; blank[i] = ws.length === l.length; above[i] = last;
+    if (!blank[i]) last = w;
+  });
+  last = 0;
+  for (let i = lines.length - 1; i >= 0; i--) {
+    const n = Math.ceil((blank[i] ? Math.max(own[i], above[i], last) : own[i]) / 2);
+    if (!blank[i]) last = own[i];
+    if (n) lines[i] = '<i style="width:' + 2 * n + 'ch"></i>' + lines[i];
+  }
+  return lines.join('\n');
 }
 
 if (typeof module === 'object' && typeof require === 'function' && require.main === module) {       // node highlight.js
@@ -107,6 +130,8 @@ if (typeof module === 'object' && typeof require === 'function' && require.main 
   assert.deepStrictEqual([...highlight('`timescale 1ns/1ps\n`default_nettype none\n`ifdef SIM\nmodule t; endmodule').names], ['t']);
   assert.deepStrictEqual([...highlight('`timescale 1 ns / 1 ps\nmodule t; initial #10 ns = 1; endmodule').names], ['t', 'ns']);
   assert.deepStrictEqual(['DEBUG', 'check'].map(w => cls('`ifdef DEBUG\n  check(x);\n`endif', w)), ['', 'f']);
+  // indent guides: one level per two columns, carried through the blank line inside the block, none at the left margin
+  assert.deepStrictEqual(highlight('a\n  b\n\n    c\n\t\td\ne\n\n').html.split('\n').map(l => (/^<i style="width:(\d+)ch">/.exec(l) || [0, 0])[1] / 2), [0, 1, 2, 2, 2, 0, 0, 0]);
   // the coloured text must be exactly the typed text: it is drawn underneath the transparent <textarea>
   const dir = path.join(__dirname, 'tests', 'cases');
   const sources = fs.readdirSync(dir).filter(f => f.endsWith('.v')).map(f => fs.readFileSync(path.join(dir, f), 'utf8'));

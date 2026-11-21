@@ -13,7 +13,7 @@
   --err: #b3261e; --err-bg: #fdeceb; --code-bg: #fbfcfe; --gutter: #7f8a99; --mark: #ffe9e7;
   --w-bit: #0a7a3c; --w-bus: #0b62bd; --w-x: #c62828; --w-z: #a86200; --w-grid: #e4e9f0; --w-cursor: #6d35d9;
   --t-c: #5f6976; --t-k: #a626a4; --t-t: #0b5cad; --t-f: #855600; --t-s: #ad4c00; --t-m: #0b7570; --t-n: #0a7848; --t-q: #a31515; --t-d: #bd175a;
-  --sel: rgba(11, 98, 189, 0.22); --cur: rgba(11, 98, 189, 0.06); --shadow: 0 1px 2px rgba(16, 24, 40, 0.06); --pop: 0 10px 28px rgba(16, 24, 40, 0.18);
+  --sel: rgba(11, 98, 189, 0.22); --cur: rgba(11, 98, 189, 0.06); --guide: rgba(24, 32, 44, 0.28); --shadow: 0 1px 2px rgba(16, 24, 40, 0.06); --pop: 0 10px 28px rgba(16, 24, 40, 0.18);
   --mono: ui-monospace, "SF Mono", "Cascadia Code", "Cascadia Mono", Menlo, Consolas, "Liberation Mono", monospace;
   --sans: system-ui, -apple-system, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
   --lh: 20px;
@@ -24,7 +24,7 @@
     --err: #ff8f85; --err-bg: #3a1715; --code-bg: #10151c; --gutter: #627084; --mark: #40201e;
     --w-bit: #4cd98a; --w-bus: #6fb7ff; --w-x: #ff6b6b; --w-z: #ffb74d; --w-grid: #212a36; --w-cursor: #c4a1ff;
     --t-c: #8492a3; --t-k: #d08fcb; --t-t: #6cb6ff; --t-f: #dcdcaa; --t-s: #e8ab6f; --t-m: #4ec9b0; --t-n: #b5cea8; --t-q: #d79b82; --t-d: #f291b3;
-    --sel: rgba(99, 173, 255, 0.3); --cur: rgba(99, 173, 255, 0.07); --shadow: none; --pop: 0 10px 28px rgba(0, 0, 0, 0.55);
+    --sel: rgba(99, 173, 255, 0.3); --cur: rgba(99, 173, 255, 0.07); --guide: rgba(228, 233, 240, 0.3); --shadow: none; --pop: 0 10px 28px rgba(0, 0, 0, 0.55);
   }
 }
 * { box-sizing: border-box; }
@@ -87,6 +87,8 @@ main { flex: 1; min-height: 0; display: grid; grid-template-columns: minmax(0, 1
 #cur { background: var(--cur); }
 #hl .c { color: var(--t-c); } #hl .k { color: var(--t-k); } #hl .t { color: var(--t-t); } #hl .f { color: var(--t-f); } #hl .s { color: var(--t-s); }
 #hl .m { color: var(--t-m); } #hl .n { color: var(--t-n); } #hl .q { color: var(--t-q); } #hl .d { color: var(--t-d); }
+/* indent guides: an empty box at the start of each indented line, as wide as its indentation, striped every two columns */
+#hl i { position: absolute; height: var(--lh); pointer-events: none; background: repeating-linear-gradient(to right, var(--guide) 0 1px, transparent 1px 2ch); }
 /* iOS draws a textarea's text 3px further in than its padding says, and that inset cannot be removed */
 @supports (-webkit-touch-callout: none) { #hl { padding-left: 15px; padding-right: 15px; } }
 
@@ -603,8 +605,18 @@ function edit(a, b, text, sel) {            // replace [a, b) with text, then pu
   if (!(text ? document.execCommand('insertText', false, text) : document.execCommand('delete'))) { src.setRangeText(text, a, b, 'end'); src.dispatchEvent(new Event('input')); }
   if (sel !== undefined) src.setSelectionRange(sel, sel);
   editing = false;
-  caret();
+  caret(); reveal();
 }
+function reveal() {                         // scroll the caret into view: the browser does that for typing, not for the editor's own changes
+  const v = src.value, a = src.selectionEnd, top = PAD + (curLine - 1) * LH;
+  ruler.textContent = v.slice(v.lastIndexOf('\n', a - 1) + 1, a);
+  const need = PADX + ruler.getBoundingClientRect().width + PADX - src.clientWidth;      // the least sideways scroll that shows the caret
+  if (top - PAD < src.scrollTop) src.scrollTop = top - PAD;
+  else if (top + LH + PAD > src.scrollTop + src.clientHeight) src.scrollTop = top + LH + PAD - src.clientHeight;
+  if (src.scrollLeft < need || src.scrollLeft > need + src.clientWidth - 2 * PADX) src.scrollLeft = Math.max(0, need);
+  syncGutter();
+}
+function moveTo(p) { src.setSelectionRange(p, p); caret(); reveal(); }
 
 // Brackets and quotes close themselves, typing a closer that is already there steps over it, Backspace removes an
 // empty pair, Enter keeps the indentation (one level deeper after "begin", "case (…)" or an opening bracket), and a
@@ -621,12 +633,12 @@ src.addEventListener('beforeinput', e => {
   const v = src.value, a = src.selectionStart, b = src.selectionEnd, next = v[b] || '', text = inText(a);
   if (type === 'insertText' && ch && ch.length === 1) {
     // ponytail: any matching closer is stepped over, not only one the editor added; type it twice to really insert one
-    if (a === b && next === ch && (ch === '"' ? text && !escaped(v, a) : !text && ')]}'.includes(ch))) { e.preventDefault(); src.setSelectionRange(a + 1, a + 1); caret(); return; }
+    if (a === b && next === ch && (ch === '"' ? text && !escaped(v, a) : !text && ')]}'.includes(ch))) { e.preventDefault(); moveTo(a + 1); return; }
     if (a === b && !text && ')]}'.includes(ch)) {                 // the closer is waiting on a line below, where Enter put it: go to it
       const gap = /^\s*/.exec(v.slice(a, a + 400))[0], at = a + gap.length, ls = v.lastIndexOf('\n', a - 1) + 1;
       if (v[at] === ch && gap.includes('\n')) {
         e.preventDefault();
-        if (v.slice(ls, a).trim()) { src.setSelectionRange(at + 1, at + 1); caret(); }
+        if (v.slice(ls, a).trim()) moveTo(at + 1);
         else { const cls = v.lastIndexOf('\n', at - 1) + 1; edit(ls, cls, '', ls + at - cls + 1); }      // the caret's line is empty: take it away
         return;
       }

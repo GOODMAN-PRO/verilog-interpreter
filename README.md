@@ -6,8 +6,8 @@ Write a design and a testbench, press Run, and get the `$display` output and wav
 single dependency-free JavaScript file; nothing is installed and nothing is uploaded.
 
 The editor colours the code (keywords, types, numbers, strings, module names, and function, task and system-task
-names), closes brackets and quotes, keeps indentation, and suggests keywords, system tasks and the names in your
-code as you type (Tab inserts, Ctrl+Space opens the list).
+names), draws a guide line at every level of indentation, closes brackets and quotes, keeps indentation, and
+suggests keywords, system tasks and the names in your code as you type (Tab inserts, Ctrl+Space opens the list).
 
 ## What it is
 
